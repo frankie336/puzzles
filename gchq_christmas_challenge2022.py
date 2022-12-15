@@ -20,7 +20,6 @@ def is_valid_word(word):
 
 
 
-
 def create_formation_grid():
   # Define the word "FORMATION"
   word = "FORMATION"
