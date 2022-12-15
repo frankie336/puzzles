@@ -123,10 +123,6 @@ if color in color_letters:
 
 
 
-
-
-
-
 color = "blue"
 if color in color_letters:
   for letter in color_letters[color]:
@@ -451,8 +447,6 @@ if color in color_letters:
 
         if counter == 6:
             break
-
-
 
 
 
