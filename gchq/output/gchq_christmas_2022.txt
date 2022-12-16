@@ -1,0 +1,24 @@
+Step 1 - The Following colours are assigned:
+
+gold: ['F', 'T', 'O']
+blue: ['O', 'M', 'I']
+white: ['R']
+green: ['A', 'N']
+
+Step 2 - The blue squares are assigned their replacement letter:
+
+['F', 'A', 'R']
+['P', 'A', 'T']
+['T', 'O', 'N']
+
+Step 3 - The green squares are assigned their replacement letter:
+
+['F', 'A', 'R']
+['P', 'E', 'T']
+['T', 'O', 'Y']
+
+Step 4 - The gold squares are assigned their replacement letter:
+
+['C', 'A', 'R']
+['P', 'E', 'N']
+['T', 'R', 'Y']
