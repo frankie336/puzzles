@@ -55,7 +55,6 @@ def find_possible_words_blue_row_two(word, string):
         if dictionary.check(new_word):
 
             possible_words.append(new_word)
-
             return possible_words
 
 
