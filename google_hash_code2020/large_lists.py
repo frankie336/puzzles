@@ -39,9 +39,32 @@ error_handles = ["\nThe first line of the of input file is malformed.\n"
 
                  " exceeds a score of 1000.\n"
                  "The Score of individual books cannot exceed 1000.\n"
-                 "Terminating. Resume with a corrected input file!"
+                 "Terminating. Resume with a corrected input file!",
+                 " on the input file only contains a new line character with no number sequence present.\n"
+                 "This section relates to either the description of an individual library (L) or the\n"
+                 "book ID’s within a library.\n"
+                 "Terminating. Resume with a corrected input file!",
+
+                 "\nThe sum of  lines 2:n divided by 2 should yield a whole number. Where this is not the case,\n "
+                 "further processing of the input data will not work. Possible causes include:\n"
+                 "• Insufficient data\n"
+                 "• Incorrect data\n"
+                 "Terminating. Resume with a corrected input file!",
 
 
+
+                 " L1 library description is malformed.\n"
+                 "The first line should be three integers separated by a space:\n"
+                 "[L1 L2 L3]\n"
+                 "Possible causes include:\n"
+                 "• Insufficient data\n"
+                 "• Incorrect data\n"
+                 "Terminating. Resume with a corrected input file!",
+
+
+                 " L1 library description is malformed:\n"
+                 "• One or more characters are not numbers.\n"
+                 "Terminating. Resume with a corrected input file!",
 
                  ]
 
