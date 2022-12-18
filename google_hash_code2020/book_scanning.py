@@ -1,9 +1,8 @@
 import time
-
 from large_lists import  error_handles
 import abc
 import re
-
+from collections import Counter
 
 
 class Interface(metaclass=abc.ABCMeta):
@@ -23,7 +22,13 @@ class Interface(metaclass=abc.ABCMeta):
                 callable(subclass.checks_library_desc_vert_struct) and
 
                 hasattr(subclass, 'get_descriptions') and
-                callable(subclass.get_descriptions) or
+                callable(subclass.get_descriptions) and
+
+                hasattr(subclass, 'get_list_of_books') and
+                callable(subclass.get_list_of_books) and
+
+                hasattr(subclass, 'signup_order') and
+                callable(subclass.signup_order) or
 
 
                 NotImplemented)
@@ -101,6 +106,24 @@ class Interface(metaclass=abc.ABCMeta):
         raise NotImplemented
 
 
+    @abc.abstractmethod
+    def get_list_of_books(self):
+        """
+        • Creates a mapping between books per library, and the book scores
+        • Returns a nested list of scores per book in library
+        • Returns a list of summed scores per library
+        """
+        raise NotImplemented
+
+
+    @abc.abstractmethod
+    def signup_order(self):
+        """
+        Calculates which library should be the first to be signed on
+        """
+        raise NotImplemented
+
+
 
 
 
@@ -110,10 +133,10 @@ class BookScanning(Interface):
 
     correct_space_pattern = r'([^\s]+)'
 
+    def __init__(self):
 
-    def __int__(self):
-        pass
-
+        self.total_book_count = 0
+        self.days = 0
 
     def reads_text(self, file_name: str) -> str:
 
@@ -139,9 +162,9 @@ class BookScanning(Interface):
         """
         first_line =   self.reads_text(file_name='input/input.txt')[0]
 
-        spaces = re.findall(self.correct_space_pattern, first_line)
+        first_line = re.findall(self.correct_space_pattern, first_line)
 
-        if len(spaces) !=3:
+        if len(first_line) !=3:
             print(error_handles[0])
             return
         else:
@@ -151,12 +174,11 @@ class BookScanning(Interface):
         Handles cases where one of the elements on the first line is not an integer.
         """
         try:
-            spaces = [int(x) for x in spaces]
+            first_line = [int(x) for x in first_line]
 
         except ValueError:
             print(error_handles[1])
             return
-
 
         """
         Checks if numbers are 
@@ -164,7 +186,7 @@ class BookScanning(Interface):
         L ( 1 ≤ L ≤ 10**5 )
         D ( 1 ≤ D ≤ 10 5 )
         """
-        for index, number in enumerate(spaces):
+        for index, number in enumerate(first_line):
             if number == int(number):
                 if number >10**5:
                     if index == 0:
@@ -178,7 +200,9 @@ class BookScanning(Interface):
                         return
 
 
-        first_line_dict = {"Books":spaces[0],"Libraries":spaces[1],"Days":spaces[2]}
+
+
+        first_line_dict = {"Books":first_line[0],"Libraries":first_line[1],"Days":first_line[2]}
 
         return first_line_dict
 
@@ -244,7 +268,7 @@ class BookScanning(Interface):
                            }
 
 
-        print(book_score_dict)
+        #print(book_score_dict)
         return  book_score_dict
 
 
@@ -304,6 +328,8 @@ class BookScanning(Interface):
         return a
 
 
+
+
     def get_descriptions(self):
 
         """
@@ -346,18 +372,34 @@ class BookScanning(Interface):
                 return
 
 
-
+            """
+            N j ( 1 ≤ N j ≤ 10**5)
+            T j ( 1 ≤ T j ≤ 10**5)
+            M j ( 1 ≤ M j ≤ 10**5)
+            The total number of books in all libraries does not exceed 10**6 .
+            """
             for i, number in enumerate(lib_desc):
-                if number == int(number):
-                    if number > 10 ** 5:
-                        if i == 0:
-                            print(error_handles[2])
-                            return
+
+                if self.total_book_count >10**6:
+                    print(error_handles[17]+str(10**6)+error_handles[14])
+                    return
+
+                if i == 0:
+                    if number >10**5:
+                        print(error_handles[12]+ str(index)+error_handles[13]+str(10**5)+error_handles[14] )
+                        return
+                    self.total_book_count +=number
 
 
+                if i == 1:
+                    if number >10**5:
+                        print(error_handles[15]+" "+str(index)+error_handles[13]+str(10**5)+str(error_handles[14]))
+                        return
 
-
-
+                if i == 2:
+                    if number >10**5:
+                        print(error_handles[16]+str(index)+error_handles[13]+str(10**5)+str(error_handles[14]))
+                        return
 
             if len(lib_desc) != 3:
                 print("Library "+str(index)+error_handles[10])
@@ -365,25 +407,129 @@ class BookScanning(Interface):
             else:
                 pass
 
-
-
-
-
             library_desc_dict = {"Library"+str(index):[]}
             library_desc_dict["Library"+str(index)].append(lib_desc)
             library_desc_dict["Library" + str(index)].append(book_id)
             library_desc_dict_master.update(library_desc_dict)
 
-
-        print(library_desc_dict_master)
+        #print(library_desc_dict_master)
         return library_desc_dict_master
 
 
 
 
+    def get_list_of_books(self):
+        """
+        • Returns nested list of books per library
+        """
+
+        b = self.checks_first_line()["Books"]
+        print(b,"Books")
+
+        d = self.checks_first_line()["Days"]
+        print(d,"Days")
+
+        l =self.checks_first_line()["Libraries"]
+        print(l,"Libraries")
+
+
+        desc = self.get_descriptions()
+        t = self.get_descriptions()["Library0"][0][1]
+
+        """
+        Gets the books per library
+        """
+        books_in_library_consol = []
+
+        for i in range(l):
+            books_in_library = self.get_descriptions()["Library"+str(i)][1]
+
+            books_in_library_consol.append(books_in_library)
+
+
+        return  books_in_library_consol
 
 
 
+
+    def signup_order(self):
+        """
+        Calculates which library should be the first to be signed on
+        """
+        full_list_of_books = self.get_list_of_books()
+
+        l = self.checks_first_line()["Libraries"]
+        print(l, "Libraries")
+
+        """
+        Creates a list of duplicate entries that can be used to filter the nested lists.
+        """
+        flattened_list = [i for sublist in full_list_of_books for i in sublist]
+        counter = Counter(flattened_list)
+        duplicate_entries = [i for i in flattened_list if counter[i] > 1]
+
+        print(duplicate_entries)
+
+        """
+        Filters unique books from each list of books
+        """
+        unique_books = [[x for x in inner_list if x not in duplicate_entries] for inner_list in full_list_of_books]
+
+        print(full_list_of_books)
+        print(unique_books,'<--Unique Books')
+
+
+        """
+        Maps the value of the unique books per library.
+        """
+        mapped_scores = []
+        for inner_list in full_list_of_books:
+            score = []
+            for book in inner_list:
+                book_score = self.checks_second_line()["Book" + str(book)]
+                score.append(book_score)
+
+
+
+            mapped_scores.append(score)
+
+        summed_book_scores = [sum(sublist) for sublist in mapped_scores]
+
+        print(mapped_scores,'<---Score per unique book')
+        print(summed_book_scores,'<----summed unique book scores')
+
+
+        values_time = []
+
+        for i, value in enumerate(summed_book_scores):
+
+            sign_on_time = self.get_descriptions()["Library"+str(i)][0][1]
+
+            value = (value,sign_on_time)
+
+            values_time.append(value)
+
+        print(values_time)
+
+
+        print(self.get_descriptions())
+
+        value_ratios = [a / b for a, b in values_time]
+
+        sign_up_order_dict = {}
+
+
+
+        for i, value in enumerate(value_ratios):
+
+            sign_up_order_dict[str(i)] = value
+
+        sign_up_order_dict = sorted(sign_up_order_dict.items(), key=lambda item: item[1], reverse=True)
+
+        print(sign_up_order_dict)
+
+
+        return sign_up_order_dict
 
 
 
@@ -423,7 +569,9 @@ def testing():
     #print(run.checks_first_line())
     #run.checks_second_line()
     #run.checks_library_desc_vert_struct()
-    run.get_descriptions()
+    #run.get_descriptions()
+    #run.get_list_of_books()
+    run.signup_order()
 
 
 if __name__ == "__main__":

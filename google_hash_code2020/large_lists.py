@@ -66,6 +66,16 @@ error_handles = ["\nThe first line of the of input file is malformed.\n"
                  "• One or more characters are not numbers.\n"
                  "Terminating. Resume with a corrected input file!",
 
+                 "The number of books in library ",
+                 " cannot exceed ",
+                 "\nTerminating. Resume with a corrected input file!",
+
+                 "The number of days it takes to finish sign up of library ",
+
+                 "The number of books that can be shipped from library ",
+
+                 "The total number of books in all libraries does not exceed ",
+
                  ]
 
 
