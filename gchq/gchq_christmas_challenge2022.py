@@ -152,6 +152,11 @@ grid, color_letters = create_formation_grid()
 
 
 
+
+
+
+
+
 def colours():
     """
     Writes color mappings
@@ -491,7 +496,6 @@ def green_squares(color):
 
 green_squares('green')
 
-time.sleep(1000)
 
 
 
