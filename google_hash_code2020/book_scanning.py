@@ -28,7 +28,13 @@ class Interface(metaclass=abc.ABCMeta):
                 callable(subclass.get_list_of_books) and
 
                 hasattr(subclass, 'signup_order') and
-                callable(subclass.signup_order) or
+                callable(subclass.signup_order) and
+
+                hasattr(subclass, 'book_selection') and
+                callable(subclass.book_selection) and
+
+                hasattr(subclass, 'submission_file') and
+                callable(subclass.submission_file) or
 
 
                 NotImplemented)
@@ -120,6 +126,22 @@ class Interface(metaclass=abc.ABCMeta):
     def signup_order(self):
         """
         Calculates which library should be the first to be signed on
+        """
+        raise NotImplemented
+
+
+
+    @abc.abstractmethod
+    def book_selection(self):
+        """
+        Selects books to be scanned per library
+        """
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def submission_file(self):
+        """
+        Creates the submission file
         """
         raise NotImplemented
 
@@ -454,7 +476,9 @@ class BookScanning(Interface):
 
     def signup_order(self):
         """
-        Calculates which library should be the first to be signed on
+        The order in which libraries are signed up is determined  by a formula:
+        a/b. Where a is the sum total of total book scores on hand, and b is the
+        time cost incurred in the sign up process.
         """
         full_list_of_books = self.get_list_of_books()
 
@@ -467,8 +491,7 @@ class BookScanning(Interface):
         flattened_list = [i for sublist in full_list_of_books for i in sublist]
         counter = Counter(flattened_list)
         duplicate_entries = [i for i in flattened_list if counter[i] > 1]
-
-        print(duplicate_entries)
+        #print(duplicate_entries)
 
         """
         Filters unique books from each list of books
@@ -480,7 +503,7 @@ class BookScanning(Interface):
 
 
         """
-        Maps the value of the unique books per library.
+        Maps the value of the books per library.
         """
         mapped_scores = []
         for inner_list in full_list_of_books:
@@ -509,16 +532,12 @@ class BookScanning(Interface):
 
             values_time.append(value)
 
-        print(values_time)
-
 
         print(self.get_descriptions())
 
         value_ratios = [a / b for a, b in values_time]
 
         sign_up_order_dict = {}
-
-
 
         for i, value in enumerate(value_ratios):
 
@@ -528,8 +547,137 @@ class BookScanning(Interface):
 
         print(sign_up_order_dict)
 
-
         return sign_up_order_dict
+
+
+
+
+    def book_selection(self):
+        """
+        Selects books to be scanned per library
+        """
+        sign_up = self.signup_order()
+
+        books_per_library = self.get_list_of_books()
+
+
+        print(books_per_library)
+
+
+
+        book_scores = []
+
+        for i, value in enumerate(sign_up):
+
+            libr = value[0]
+
+            cand_books = books_per_library[int(libr)]
+
+            score = []
+            for i, book in enumerate(cand_books):
+
+                book_score = self.checks_second_line()["Book" + str(book)]
+                score.append(book_score)
+
+            book_scores.append(score)
+
+        print(book_scores)
+
+        list_dicts = []
+        """
+        Makes a list of dictionaries per library. The keys=book ID’s.
+        The values = valuer per book.
+        """
+        for sublist, keys in zip(book_scores, books_per_library):
+            list_dicts.append({key: value for key, value in zip(keys, sublist)})
+
+        print(list_dicts)
+
+        book_order_dicts = [{k: v for k, v in sorted(d.items(), key=lambda item: item[1], reverse=True)} for d in list_dicts]
+
+        print(book_order_dicts)
+
+        return book_order_dicts
+
+
+    def submission_file(self):
+        """
+        Creates the submission file
+        """
+
+        """
+        • Calculates the number of available days after the first Library completes the sign up process 
+        • All processing must now scale into this remainder number 
+        """
+        self.days = self.checks_first_line()["Days"]
+
+        first_lib_id = self.signup_order()[0][0]
+
+        first_cost = self.get_descriptions()["Library"+first_lib_id][0][1]
+
+        self.days = self.days-(first_cost+1)
+        print(self.days)
+
+        """
+        . Calculates scaling of book submissions over given days.
+        """
+        book_coe = []
+        book_scaling = []
+        counter = 0
+        for value in self.get_descriptions().values():
+
+            a = value[0][2]
+            book_coe.append(a)
+
+            b = value[0][0]
+
+            d = b - a
+
+            times_to_multiply = d / a
+
+            rounded_times = round(times_to_multiply)
+
+            result = a * rounded_times
+
+            book_scaling.append(result)
+
+
+
+        print(counter,'???')
+
+
+
+
+
+
+        print(book_coe,book_scaling)
+
+        print(self.get_descriptions())
+
+
+
+
+
+
+
+
+
+
+        #print(book_coe,book_scaling)
+        #number_of_libraries = str(len(self.signup_order()))
+        #with open('output/output.txt', 'a') as file:
+            #file.write(number_of_libraries)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -571,7 +719,9 @@ def testing():
     #run.checks_library_desc_vert_struct()
     #run.get_descriptions()
     #run.get_list_of_books()
-    run.signup_order()
+    #run.signup_order()
+    run.book_selection()
+    run.submission_file()
 
 
 if __name__ == "__main__":
