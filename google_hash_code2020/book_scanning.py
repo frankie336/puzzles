@@ -12,11 +12,11 @@ class Interface(metaclass=abc.ABCMeta):
         return (hasattr(subclass, 'reads_text') and
                 callable(subclass.reads_text) and
 
-                hasattr(subclass, 'checks_first_line') and
-                callable(subclass.checks_first_line) and
+                hasattr(subclass, 'header_line') and
+                callable(subclass.header_line) and
 
-                hasattr(subclass, 'checks_second_line') and
-                callable(subclass.checks_second_line) and
+                hasattr(subclass, 'book_scores') and
+                callable(subclass.book_scores) and
 
                 hasattr(subclass, 'checks_library_desc_vert_struct') and
                 callable(subclass.checks_library_desc_vert_struct) and
@@ -40,7 +40,6 @@ class Interface(metaclass=abc.ABCMeta):
                 NotImplemented)
 
 
-
     @abc.abstractmethod
     def reads_text(self,file_name: str) -> str:
         """
@@ -51,7 +50,7 @@ class Interface(metaclass=abc.ABCMeta):
 
 
     @abc.abstractmethod
-    def checks_first_line(self):
+    def header_line(self):
         """
         • Checks the structure of the first line integers :
         • Are they within the right spacing structure: n1 n2  n3 ?
@@ -64,7 +63,7 @@ class Interface(metaclass=abc.ABCMeta):
 
 
     @abc.abstractmethod
-    def checks_second_line(self):
+    def book_scores(self):
         """
         • Checks the structure of the second line integers :
         • Are they within the right spacing structure: S 0 , … , S B-1 , (0 ≤ S i ≤ 10 3 )?
@@ -125,8 +124,12 @@ class Interface(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def signup_order(self):
         """
-        Calculates which library should be the first to be signed on
+        This method selects the order in which libraries are selected for the signup process:
+        f(x) = ∑i∈L (Vi * xi)
+        Subject to the following constraint:
+        ∑i∈L (Ti * xi) <= D
         """
+
         raise NotImplemented
 
 
@@ -173,7 +176,7 @@ class BookScanning(Interface):
 
 
 
-    def checks_first_line(self):
+    def header_line(self):
         """
         • Checks the structure of the first line integers :
         • Are they within the right spacing structure: n1 n2  n3 ?
@@ -233,7 +236,7 @@ class BookScanning(Interface):
 
 
 
-    def checks_second_line(self):
+    def book_scores(self):
         """
         • Checks the structure of the second line integers :
         • Are they within the right spacing structure: S 0 , … , S B-1 , (0 ≤ S i ≤ 10 3 )?
@@ -243,7 +246,7 @@ class BookScanning(Interface):
         """
         sec_line = self.reads_text(file_name='input/input.txt')[1]
 
-        number_of_books = self.checks_first_line()["Books"]
+        number_of_books = self.header_line()["Books"]
 
         spaces = re.findall(self.correct_space_pattern, sec_line)
 
@@ -289,8 +292,6 @@ class BookScanning(Interface):
                            "Book5":spaces[5],
                            }
 
-
-        #print(book_score_dict)
         return  book_score_dict
 
 
@@ -445,13 +446,13 @@ class BookScanning(Interface):
         • Returns nested list of books per library
         """
 
-        b = self.checks_first_line()["Books"]
+        b = self.header_line()["Books"]
         print(b,"Books")
 
-        d = self.checks_first_line()["Days"]
+        d = self.header_line()["Days"]
         print(d,"Days")
 
-        l =self.checks_first_line()["Libraries"]
+        l =self.header_line()["Libraries"]
         print(l,"Libraries")
 
 
@@ -476,78 +477,90 @@ class BookScanning(Interface):
 
     def signup_order(self):
         """
-        The order in which libraries are signed up is determined  by a formula:
-        a/b. Where a is the sum total of total book scores on hand, and b is the
-        time cost incurred in the sign up process.
+        This method selects the order in which libraries are selected for the signup process:
+        f(x) = ∑i∈L (Vi * xi)
+        Subject to the following constraint:
+        ∑i∈L (Ti * xi) <= D
         """
-        full_list_of_books = self.get_list_of_books()
+        header_line = self.header_line()
 
-        l = self.checks_first_line()["Libraries"]
-        print(l, "Libraries")
+        self.days = header_line["Days"]
 
-        """
-        Creates a list of duplicate entries that can be used to filter the nested lists.
-        """
-        flattened_list = [i for sublist in full_list_of_books for i in sublist]
-        counter = Counter(flattened_list)
-        duplicate_entries = [i for i in flattened_list if counter[i] > 1]
-        #print(duplicate_entries)
+        library_books = self.get_list_of_books()
 
-        """
-        Filters unique books from each list of books
-        """
-        unique_books = [[x for x in inner_list if x not in duplicate_entries] for inner_list in full_list_of_books]
+        book_scores = self.book_scores()
 
-        print(full_list_of_books)
-        print(unique_books,'<--Unique Books')
+        descriptions = self.get_descriptions()
 
 
         """
         Maps the value of the books per library.
         """
         mapped_scores = []
-        for inner_list in full_list_of_books:
+
+        for inner_list in library_books:
             score = []
             for book in inner_list:
-                book_score = self.checks_second_line()["Book" + str(book)]
+                book_score = book_scores["Book" + str(book)]
                 score.append(book_score)
-
-
 
             mapped_scores.append(score)
 
+        """
+        Begin by sorting the libraries in decreasing order of value per day, 
+        where value per day is calculated as the total value of the books in 
+        the library divided by the time it takes to sign up for the library.
+        """
         summed_book_scores = [sum(sublist) for sublist in mapped_scores]
+        library_values = []
 
-        print(mapped_scores,'<---Score per unique book')
-        print(summed_book_scores,'<----summed unique book scores')
+        for i, score in enumerate(summed_book_scores):
 
+            signup_days = descriptions["Library"+str(i)][0][1]
 
-        values_time = []
+            value = score/signup_days
 
-        for i, value in enumerate(summed_book_scores):
+            library_values.append(value)
 
-            sign_on_time = self.get_descriptions()["Library"+str(i)][0][1]
-
-            value = (value,sign_on_time)
-
-            values_time.append(value)
+        library_values_dict = {i: x for i, x in enumerate(library_values)}
+        library_values_dict = dict(sorted(library_values_dict.items(), key=lambda item: item[1], reverse=True))
 
 
-        print(self.get_descriptions())
+        """
+        • Loops the values dictionary 
+        • Libraries will only be selected where the number of days left after their sign on process is >0
+        • The key of the ordered dictionary is the library ID and thus preserves the correct ID in selection 
+        """
+        selected_libraries = []
 
-        value_ratios = [a / b for a, b in values_time]
+        for i, (key, value) in enumerate(library_values_dict.items()):
 
-        sign_up_order_dict = {}
+            days = descriptions["Library"+str(key)][0][1]
 
-        for i, value in enumerate(value_ratios):
+            self.days = self.days - (days+1)
 
-            sign_up_order_dict[str(i)] = value
+            if self.days >0:
+                selected_libraries.append(key)
 
-        sign_up_order_dict = sorted(sign_up_order_dict.items(), key=lambda item: item[1], reverse=True)
 
-        print(sign_up_order_dict)
 
-        return sign_up_order_dict
+        #print(header_line,'<----Header line','\n',
+              #self.days,'<---Days','\n',
+              #library_books,'<---library books','\n',
+              #book_scores,'<----Book Scores','\n',
+              #mapped_scores,'<----Mapped Scores','\n',
+              #summed_book_scores,'<----Summed book scores','\n',
+              #descriptions,'<-----descriptions','\n',
+              #library_values,'<---values','\n',
+              #library_values_dict,'<-----values dict','\n',
+             #selected_libraries,'<-----selected libraries'
+              #)
+
+
+
+        return selected_libraries
+
+
 
 
 
@@ -563,8 +576,6 @@ class BookScanning(Interface):
 
         print(books_per_library)
 
-
-
         book_scores = []
 
         for i, value in enumerate(sign_up):
@@ -576,7 +587,7 @@ class BookScanning(Interface):
             score = []
             for i, book in enumerate(cand_books):
 
-                book_score = self.checks_second_line()["Book" + str(book)]
+                book_score = self.book_scores()["Book" + str(book)]
                 score.append(book_score)
 
             book_scores.append(score)
@@ -604,69 +615,6 @@ class BookScanning(Interface):
         """
         Creates the submission file
         """
-
-        """
-        • Calculates the number of available days after the first Library completes the sign up process 
-        • All processing must now scale into this remainder number 
-        """
-        self.days = self.checks_first_line()["Days"]
-
-        first_lib_id = self.signup_order()[0][0]
-
-        first_cost = self.get_descriptions()["Library"+first_lib_id][0][1]
-
-        self.days = self.days-(first_cost+1)
-        print(self.days)
-
-        """
-        . Calculates scaling of book submissions over given days.
-        """
-        book_coe = []
-        book_scaling = []
-        counter = 0
-        for value in self.get_descriptions().values():
-
-            a = value[0][2]
-            book_coe.append(a)
-
-            b = value[0][0]
-
-            d = b - a
-
-            times_to_multiply = d / a
-
-            rounded_times = round(times_to_multiply)
-
-            result = a * rounded_times
-
-            book_scaling.append(result)
-
-
-
-        print(counter,'???')
-
-
-
-
-
-
-        print(book_coe,book_scaling)
-
-        print(self.get_descriptions())
-
-
-
-
-
-
-
-
-
-
-        #print(book_coe,book_scaling)
-        #number_of_libraries = str(len(self.signup_order()))
-        #with open('output/output.txt', 'a') as file:
-            #file.write(number_of_libraries)
 
 
 
@@ -714,14 +662,14 @@ class BookScanning(Interface):
 
 def testing():
     run = BookScanning()
-    #print(run.checks_first_line())
-    #run.checks_second_line()
+    #print(run.header_line())
+    #run.book_scores()
     #run.checks_library_desc_vert_struct()
     #run.get_descriptions()
     #run.get_list_of_books()
-    #run.signup_order()
-    run.book_selection()
-    run.submission_file()
+    run.signup_order()
+    #run.book_selection()
+    #run.submission_file()
 
 
 if __name__ == "__main__":
