@@ -1,4 +1,5 @@
 import time
+import os
 from large_lists import  error_handles
 import abc
 import re
@@ -42,6 +43,8 @@ class Interface(metaclass=abc.ABCMeta):
 
 
                 NotImplemented)
+
+
 
 
     @abc.abstractmethod
@@ -105,6 +108,8 @@ class Interface(metaclass=abc.ABCMeta):
         raise NotImplemented
 
 
+
+
     @abc.abstractmethod
     def get_descriptions(self):
         """
@@ -115,6 +120,8 @@ class Interface(metaclass=abc.ABCMeta):
         raise NotImplemented
 
 
+
+
     @abc.abstractmethod
     def get_list_of_books(self):
         """
@@ -123,6 +130,7 @@ class Interface(metaclass=abc.ABCMeta):
         • Returns a list of summed scores per library
         """
         raise NotImplemented
+
 
 
     @abc.abstractmethod
@@ -137,12 +145,15 @@ class Interface(metaclass=abc.ABCMeta):
 
 
 
+
     @abc.abstractmethod
     def book_selection(self):
         """
         Selects books to be scanned per library
         """
         raise NotImplemented
+
+
 
 
     @abc.abstractmethod
@@ -160,12 +171,17 @@ class Interface(metaclass=abc.ABCMeta):
 
 
 
-
-
     @abc.abstractmethod
     def submission_file(self):
         """
         Creates the submission file
+        • Must start with a line containing the integer A ( 0 ≤ A ≤ L )
+        • Describes which books to ship from which library
+        • The order in which libraries are signed up
+        • Must describe each library, in the order that you want them to start the signup process
+        • The description of each library must contain two lines:
+        Y ( 0 ≤ Y ≤ L – 1) – the ID of the library
+        K ( 1 ≤ K ≤ N Y )
         """
         raise NotImplemented
 
@@ -181,8 +197,10 @@ class BookScanning(Interface):
 
         self.total_book_count = 0
         self.days = 0
-
         self.books_scanned = []#tracks all scanned books
+
+
+
 
     def reads_text(self, file_name: str) -> str:
 
@@ -251,8 +269,6 @@ class BookScanning(Interface):
         first_line_dict = {"Books":first_line[0],"Libraries":first_line[1],"Days":first_line[2]}
 
         return first_line_dict
-
-
 
 
 
@@ -555,11 +571,15 @@ class BookScanning(Interface):
 
             self.days = self.days - (days+0)
 
-            if self.days >0:
+            """
+            If there is at least one day left 
+            after the sign up process include 
+            the library as a selected library 
+            """
+            if self.days >1:
                 selected_libraries.append(key)
 
         self.days = header_line["Days"]#resets the tota number of days for later use
-
 
 
         #print(header_line,'<----Header line','\n',
@@ -664,7 +684,7 @@ class BookScanning(Interface):
 
         descriptions = self.get_descriptions()
 
-        ship_schedule_dict = {}
+        scans_schedule_dict = {}
 
         for i in range(len(candidate_books)):
 
@@ -686,56 +706,99 @@ class BookScanning(Interface):
             B = descriptions["Library" + str(library_id)][0][0]
             M=B
 
-            num_shipments = M // R
+            num_shipments = M // R    ###need solution
             final_shipment_size = min(D * R, M - num_shipments * R, B)
-
-            ships_list = []#A list to collect the order of scanning
-
 
 
             for i in range(num_shipments):
 
-
                 B = B - R
 
-                ships_list.append(R)
+                scans_range =R*num_shipments+final_shipment_size
 
-            ships_list.append(final_shipment_size)
-
-            ships_range = sum([number for number in ships_list])
 
             book_list = list(cand_books.keys())
 
             book_list = [x for x in book_list if x not in self.books_scanned]#Filters books that have been scanned
 
-            schedule = book_list[:ships_range]
+            schedule = book_list[:scans_range]
 
-            ship_schedule_dict[library_id] = schedule
 
-            self.days = self.days-ships_range
+            scans_schedule_dict[library_id] = schedule
+
+            self.days = self.days-scans_range
 
             self.books_scanned.extend(schedule)#Adds books just scanned to the tracker
 
 
 
-        print(self.days,'<----Initial days available','\n',
-              candidate_books,'<-----candidate books','\n',
-              ship_schedule_dict,'<----Schedule dict','\n',
-              self.days,'<----Days left','\n',
-              self.books_scanned,'<---All books scanned')
 
 
 
 
 
+        #print(self.days,'<----Initial days available','\n',
+              #candidate_books,'<-----candidate books','\n',
+              #scans_schedule_dict,'<----Schedule dict','\n',
+              #self.days,'<----Days left','\n',
+              #self.books_scanned,'<---All books scanned')
+
+        return scans_schedule_dict
 
 
 
 
     def submission_file(self):
         """
-        Creates the submission file
+        • Must start with a line containing the integer A ( 0 ≤ A ≤ L )
+        • Describes which books to ship from which library
+        • The order in which libraries are signed up
+        • Must describe each library, in the order that you want them to start the signup process
+        • The description of each library must contain two lines:
+        Y ( 0 ≤ Y ≤ L – 1) – the ID of the library
+        K ( 1 ≤ K ≤ N Y )
         """
+        file_name = 'output/output.txt'
+
+        selected_libraries = self.signup_order()#Ordered list of selected libraries
+
+        libraries = str(len(selected_libraries))
+
+        scan_secdule = self.scanning_schedule()
+
+        print(len(scan_secdule))
+
+
+
+
+        if os.path.exists(file_name):
+            os.remove(file_name)
+            print(f'{file_name} deleted.')
+
+
+        with open(file_name, "w") as file:
+            file.write(libraries+'\n')
+
+
+
+        for i, library in enumerate(selected_libraries):
+
+
+            schedule = scan_secdule[library]
+            schedule = list(map(str, schedule))
+            books_no = str(len(schedule))
+            schedule_string = " ".join(schedule)
+
+            ord = str(library) + ' ' +books_no+ '\n'+schedule_string+'\n'
+
+            with open(file_name, "a") as file:
+                file.write(ord)
+
+
+
+        print(selected_libraries,'<----Selected libraries','\n',
+              scan_secdule,'<------Scan Schedule per library')
+
 
 
 
@@ -752,9 +815,10 @@ def testing():
     #run.get_descriptions()
     #run.get_list_of_books()
     #run.signup_order()
-    run.book_selection()
-    run.scanning_schedule()
-    #run.submission_file()
+    #run.book_selection()
+    #run.scanning_schedule()
+    run.submission_file()
+    #print(run.signup_order())
 
 
 if __name__ == "__main__":
