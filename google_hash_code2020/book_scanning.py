@@ -553,8 +553,6 @@ class BookScanning(Interface):
 
 
 
-
-
     def book_selection(self):
         """
         Selects books to be scanned per library
@@ -574,7 +572,6 @@ class BookScanning(Interface):
         library_books = self.get_list_of_books()
 
         book_scores = self.book_scores()
-
 
         """
         """
@@ -615,12 +612,6 @@ class BookScanning(Interface):
 
 
 
-
-
-
-
-
-
         print(selected_libraries,'<--Selected_libraries','\n',
               library_books,'<---library_books','\n',
               book_scores,'<--Book_scores','\n',
@@ -628,19 +619,6 @@ class BookScanning(Interface):
               list_of_candbooks,'<------cand_books','\n',
               master_book_dicts,'<----wrapped_dicts','\n',
               final_sorted_dicts_list ,'<----sorted')
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
