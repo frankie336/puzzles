@@ -129,7 +129,6 @@ class Interface(metaclass=abc.ABCMeta):
         Subject to the following constraint:
         ∑i∈L (Ti * xi) <= D
         """
-
         raise NotImplemented
 
 
@@ -147,8 +146,6 @@ class Interface(metaclass=abc.ABCMeta):
         Creates the submission file
         """
         raise NotImplemented
-
-
 
 
 
@@ -248,14 +245,14 @@ class BookScanning(Interface):
 
         number_of_books = self.header_line()["Books"]
 
-        spaces = re.findall(self.correct_space_pattern, sec_line)
+        book_list = re.findall(self.correct_space_pattern, sec_line)
 
 
         """
         The size of S is equal to the number of books. 
         Check that the data input has the correct size of S.
         """
-        if len(spaces) !=number_of_books:
+        if len(book_list) !=number_of_books:
             print(error_handles[5])
             return
         else:
@@ -266,31 +263,27 @@ class BookScanning(Interface):
         Handles cases where one of the elements on the first line is not an integer.
         """
         try:
-            spaces = [int(x) for x in spaces]
+            book_list = [int(x) for x in book_list]
 
         except ValueError:
             print(error_handles[6])
             return
 
-
         """
         Checks if numbers are 
         S 0 , … , S B-1 , (0 ≤ S i ≤ 10 3 )
         """
-        for index, number in enumerate(spaces):
+        for index, number in enumerate(book_list):
             if number == int(number):
                 if number > 10 ** 3:
                     print("Book "+str(index)+error_handles[7])
                     return
 
+        book_score_dict = {}
 
-        book_score_dict = {"Book0":spaces[0],
-                           "Book1":spaces[1],
-                           "Book2":spaces[2],
-                           "Book3":spaces[3],
-                           "Book4":spaces[4],
-                           "Book5":spaces[5],
-                           }
+        for i, score in enumerate(book_list):
+            book_score_dict["Book"+str(i)] = score
+
 
         return  book_score_dict
 
@@ -435,7 +428,6 @@ class BookScanning(Interface):
             library_desc_dict["Library" + str(index)].append(book_id)
             library_desc_dict_master.update(library_desc_dict)
 
-        #print(library_desc_dict_master)
         return library_desc_dict_master
 
 
@@ -556,8 +548,6 @@ class BookScanning(Interface):
              #selected_libraries,'<-----selected libraries'
               #)
 
-
-
         return selected_libraries
 
 
@@ -568,90 +558,97 @@ class BookScanning(Interface):
     def book_selection(self):
         """
         Selects books to be scanned per library
+
+        Sorted books:
+        B_{iB_{i,1} >= B_{i,2} >= ... >= B_{i,m_i},1} >= B_{i,2} >= ... >= B_{i,m_i}
+        Request:
+        B_{i,j} = argmax_{b \in U} V_{i,j}
+
+        Sort the books in each library by their assigned value in decreasing order
+        For each library, request the highest value book that has not already been scanned and
+        can be scanned within the remaining number of days.
+        Repeat this process until all books have been scanned or there are no more days left.
         """
-        sign_up = self.signup_order()
+        selected_libraries = self.signup_order()
 
-        books_per_library = self.get_list_of_books()
+        library_books = self.get_list_of_books()
+
+        book_scores = self.book_scores()
 
 
-        print(books_per_library)
+        """
+        """
+        mapped_scores = []
 
-        book_scores = []
+        for i, library in enumerate(selected_libraries):
 
-        for i, value in enumerate(sign_up):
-
-            libr = value[0]
-
-            cand_books = books_per_library[int(libr)]
+            cand_books = library_books[library]
 
             score = []
-            for i, book in enumerate(cand_books):
+            for j, book in enumerate(cand_books):
 
-                book_score = self.book_scores()["Book" + str(book)]
+                book_score = book_scores["Book" + str(book)]
+
                 score.append(book_score)
 
-            book_scores.append(score)
+            mapped_scores.append(score)
 
-        print(book_scores)
 
-        list_dicts = []
-        """
-        Makes a list of dictionaries per library. The keys=book ID’s.
-        The values = valuer per book.
-        """
-        for sublist, keys in zip(book_scores, books_per_library):
-            list_dicts.append({key: value for key, value in zip(keys, sublist)})
 
-        print(list_dicts)
+        list_of_candbooks = [dict(zip(keys, lst)) for keys, lst in zip(library_books, mapped_scores)]
 
-        book_order_dicts = [{k: v for k, v in sorted(d.items(), key=lambda item: item[1], reverse=True)} for d in list_dicts]
+        master_book_dicts = [{key: dict_} for key, dict_ in zip(selected_libraries, list_of_candbooks)]#dicts,keys from nest
 
-        print(book_order_dicts)
 
-        return book_order_dicts
+
+        final_sorted_dicts_list = []
+
+        for i in range(len(master_book_dicts)):
+
+            sortx  = ordered_master_book_dicts1 = [
+            {outer_key: {k: v for k, v in sorted(inner_dict.items(), key=lambda x: x[1], reverse=True)}}
+            for outer_key, inner_dict in master_book_dicts[i].items()]
+
+
+            final_sorted_dicts_list.append(sortx[0])
+
+
+
+
+
+
+
+
+
+
+        print(selected_libraries,'<--Selected_libraries','\n',
+              library_books,'<---library_books','\n',
+              book_scores,'<--Book_scores','\n',
+              mapped_scores,'<-----mapped_scores','\n',
+              list_of_candbooks,'<------cand_books','\n',
+              master_book_dicts,'<----wrapped_dicts','\n',
+              final_sorted_dicts_list ,'<----sorted')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     def submission_file(self):
         """
         Creates the submission file
         """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -667,8 +664,8 @@ def testing():
     #run.checks_library_desc_vert_struct()
     #run.get_descriptions()
     #run.get_list_of_books()
-    run.signup_order()
-    #run.book_selection()
+    #run.signup_order()
+    run.book_selection()
     #run.submission_file()
 
 
