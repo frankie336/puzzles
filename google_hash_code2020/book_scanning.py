@@ -33,8 +33,12 @@ class Interface(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'book_selection') and
                 callable(subclass.book_selection) and
 
+                hasattr(subclass, 'scanning_schedule') and
+                callable(subclass.scanning_schedule) and
+
                 hasattr(subclass, 'submission_file') and
                 callable(subclass.submission_file) or
+
 
 
                 NotImplemented)
@@ -140,6 +144,24 @@ class Interface(metaclass=abc.ABCMeta):
         """
         raise NotImplemented
 
+
+    @abc.abstractmethod
+    def scanning_schedule(self):
+        """
+        Calculates a scanning schedule that maximises the number
+        of books on hand per library scaled each day by the rate
+        at which a library can send books.
+
+        num_shipments = ⌊M / R⌋
+        final_shipment_size = min(D * R, M - num_shipments * R)
+        """
+        raise NotImplemented
+
+
+
+
+
+
     @abc.abstractmethod
     def submission_file(self):
         """
@@ -159,6 +181,8 @@ class BookScanning(Interface):
 
         self.total_book_count = 0
         self.days = 0
+
+        self.books_scanned = []#tracks all scanned books
 
     def reads_text(self, file_name: str) -> str:
 
@@ -529,10 +553,12 @@ class BookScanning(Interface):
 
             days = descriptions["Library"+str(key)][0][1]
 
-            self.days = self.days - (days+1)
+            self.days = self.days - (days+0)
 
             if self.days >0:
                 selected_libraries.append(key)
+
+        self.days = header_line["Days"]#resets the tota number of days for later use
 
 
 
@@ -610,15 +636,98 @@ class BookScanning(Interface):
             final_sorted_dicts_list.append(sortx[0])
 
 
+        #print(selected_libraries,'<--Selected_libraries','\n',
+              #library_books,'<---library_books','\n',
+              #book_scores,'<--Book_scores','\n',
+              #mapped_scores,'<-----mapped_scores','\n',
+              #list_of_candbooks,'<------cand_books','\n',
+              #master_book_dicts,'<----wrapped_dicts','\n',
+              #final_sorted_dicts_list ,'<----sorted')
+
+        return final_sorted_dicts_list
 
 
-        print(selected_libraries,'<--Selected_libraries','\n',
-              library_books,'<---library_books','\n',
-              book_scores,'<--Book_scores','\n',
-              mapped_scores,'<-----mapped_scores','\n',
-              list_of_candbooks,'<------cand_books','\n',
-              master_book_dicts,'<----wrapped_dicts','\n',
-              final_sorted_dicts_list ,'<----sorted')
+
+
+    def scanning_schedule(self):
+        """
+        Calculates a scanning schedule that maximises the number
+        of books on hand per library scaled each day by the rate
+        at which a library can send books.
+
+        num_shipments = ⌊M / R⌋
+        final_shipment_size = min(D * R, M - num_shipments * R)
+        """
+        header_line = self.header_line()
+
+        candidate_books = self.book_selection()
+
+        descriptions = self.get_descriptions()
+
+        ship_schedule_dict = {}
+
+        for i in range(len(candidate_books)):
+
+            library_id = list(candidate_books[i].keys())[0]
+
+            cand_books = candidate_books[i][library_id]
+
+            days = descriptions["Library" + str(library_id)][0][1]
+
+            self.days = self.days - (days + 0)#TBC
+
+            """
+            Initializing the variables of:
+            num_shipments = M // R
+            final_shipment_size = min(D * R, M - num_shipments * R, B)
+            """
+            D = self.days
+            R = descriptions["Library" + str(library_id)][0][2]
+            B = descriptions["Library" + str(library_id)][0][0]
+            M=B
+
+            num_shipments = M // R
+            final_shipment_size = min(D * R, M - num_shipments * R, B)
+
+            ships_list = []#A list to collect the order of scanning
+
+
+
+            for i in range(num_shipments):
+
+
+                B = B - R
+
+                ships_list.append(R)
+
+            ships_list.append(final_shipment_size)
+
+            ships_range = sum([number for number in ships_list])
+
+            book_list = list(cand_books.keys())
+
+            book_list = [x for x in book_list if x not in self.books_scanned]#Filters books that have been scanned
+
+            schedule = book_list[:ships_range]
+
+            ship_schedule_dict[library_id] = schedule
+
+            self.days = self.days-ships_range
+
+            self.books_scanned.extend(schedule)#Adds books just scanned to the tracker
+
+
+
+        print(self.days,'<----Initial days available','\n',
+              candidate_books,'<-----candidate books','\n',
+              ship_schedule_dict,'<----Schedule dict','\n',
+              self.days,'<----Days left','\n',
+              self.books_scanned,'<---All books scanned')
+
+
+
+
+
 
 
 
@@ -644,6 +753,7 @@ def testing():
     #run.get_list_of_books()
     #run.signup_order()
     run.book_selection()
+    run.scanning_schedule()
     #run.submission_file()
 
 
