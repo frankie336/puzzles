@@ -1,4 +1,4 @@
-#Qualification Round: /qualification-Round
+# Qualification Round: /qualification-Round
 
 This is an optimisation problem based on the Google Books Project: https://books.google.co.uk/intl/EN/googlebooks/about.html. The project encounters a logistical challenge: the optimal way to scan millions of books from tens of thousands of libraries in the case where libraries often have the same books in their catalogues. 
 
