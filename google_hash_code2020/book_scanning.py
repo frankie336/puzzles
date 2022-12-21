@@ -337,7 +337,7 @@ class BookScanning(Interface):
         """
         a = (len(vert_lines))
 
-        if self.is_whole_number(a, 2) == False:
+        if not self.is_whole_number(a, 2):
             print(error_handles[9])
         else:
             pass
@@ -437,7 +437,7 @@ class BookScanning(Interface):
         libraries = self.header_line()["Libraries"]
         print(libraries, "Libraries")
 
-        desc = self.get_descriptions()
+
 
 
         """
@@ -610,8 +610,6 @@ class BookScanning(Interface):
         at which a library can send books.
 
         """
-        header_line = self.header_line()
-
         candidate_books = self.book_selection()
 
         descriptions = self.get_descriptions()
@@ -627,7 +625,7 @@ class BookScanning(Interface):
 
             self.days = self.days - (days + 0)
 
-            book_list = list(cand_books.keys())
+
 
             """
             Initializing the variables
