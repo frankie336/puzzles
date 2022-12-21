@@ -4,7 +4,6 @@ from large_lists import  error_handles
 import abc
 import re
 from collections import Counter
-from math import floor
 
 
 class Interface(metaclass=abc.ABCMeta):
@@ -37,9 +36,6 @@ class Interface(metaclass=abc.ABCMeta):
 
                 hasattr(subclass, 'scanning_schedule') and
                 callable(subclass.scanning_schedule) and
-
-                hasattr(subclass, 'maximum_books') and
-                callable(subclass.maximum_books) and
 
                 hasattr(subclass, 'submission_file') and
                 callable(subclass.submission_file) or
@@ -161,18 +157,6 @@ class Interface(metaclass=abc.ABCMeta):
 
 
     @abc.abstractmethod
-    def maximum_books(self, B, R, D):
-        """
-        Calculates the maximum books that can be scanned after sign up
-        Maximum number of books = min(B, R * D)
-        """
-        raise NotImplemented
-
-
-
-
-
-    @abc.abstractmethod
     def scanning_schedule(self):
         """
         Calculates a scanning schedule that maximises the number
@@ -183,7 +167,6 @@ class Interface(metaclass=abc.ABCMeta):
         final_shipment_size = min(D * R, M - num_shipments * R)
         """
         raise NotImplemented
-
 
 
 
@@ -686,23 +669,14 @@ class BookScanning(Interface):
 
 
 
-    def maximum_books(self, B, R, D):
-        """
-        Calculates the maximum books
-        that can be scanned after sign up
-        Maximum number of books = min(B, R * D)
-        """
-        return min(B, R * D)
-
-
-
-
     def scanning_schedule(self):
         """
         Calculates a scanning schedule that maximises the number
         of books on hand per library scaled each day by the rate
         at which a library can send books.
 
+        num_shipments = ⌊M / R⌋
+        final_shipment_size = min(D * R, M - num_shipments * R)
         """
         header_line = self.header_line()
 
@@ -720,31 +694,43 @@ class BookScanning(Interface):
 
             days = descriptions["Library" + str(library_id)][0][1]
 
-            self.days = self.days - (days + 0)
-
-            book_list = list(cand_books.keys())
-
+            self.days = self.days - (days + 0)#TBC
 
             """
-            Initializing the variables
+            Initializing the variables of:
+            num_shipments = M // R
+            final_shipment_size = min(D * R, M - num_shipments * R, B)
             """
             D = self.days
             R = descriptions["Library" + str(library_id)][0][2]
             B = descriptions["Library" + str(library_id)][0][0]
+            M=B
 
-            B = len(cand_books)
+            num_shipments = M // R    ###need solution
+            final_shipment_size = min(D * R, M - num_shipments * R, B)
 
-            scans_range = self.maximum_books(B,R,D)
+
+            for i in range(num_shipments):
+
+                B = B - R
+
+                scans_range =R*num_shipments+final_shipment_size
+
 
             book_list = list(cand_books.keys())
 
-            book_list = [x for x in book_list if x not in self.books_scanned]
+            book_list = [x for x in book_list if x not in self.books_scanned]#Filters books that have been scanned
 
             schedule = book_list[:scans_range]
 
+
             scans_schedule_dict[library_id] = schedule
 
-            self.books_scanned.extend(schedule)
+            self.days = self.days-scans_range
+
+            self.books_scanned.extend(schedule)#Adds books just scanned to the tracker
+
+
 
 
 
@@ -756,7 +742,6 @@ class BookScanning(Interface):
               #scans_schedule_dict,'<----Schedule dict','\n',
               #self.days,'<----Days left','\n',
               #self.books_scanned,'<---All books scanned')
-
 
         return scans_schedule_dict
 
