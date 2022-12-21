@@ -438,7 +438,7 @@ class BookScanning(Interface):
         print(libraries, "Libraries")
 
         desc = self.get_descriptions()
-        t = self.get_descriptions()["Library0"][0][1]
+
 
         """
         Gets the books per library
