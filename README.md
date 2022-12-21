@@ -1,6 +1,6 @@
 # Puzzle Solutions
 
-This repository contains solutions to various coding and mathematical puzzles from multiple sources. The solutions are written in various programming languages, as noted in the individual solution files.
+This repository contains solutions to various coding challenges. The solutions are written in various programming languages, as noted in the individual solution files.
 
 ## Getting Started
 
