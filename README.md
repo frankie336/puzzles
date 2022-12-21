@@ -2,6 +2,16 @@
 
 This repository contains solutions to various coding challenges. The solutions are written in various programming languages, as noted in the individual solution files.
 
+
+## Folder Structure
+
+
+gchq/: GCHQ (Government Communications Headquarters) coding challenges
+
+google-hash-code-2020/: Google Hash Code challeneges
+
+
+
 ## Getting Started
 
 To use this repository, simply clone or download the files to your local machine. Each solution is contained in a separate file, and the file name includes the name of the puzzle and the programming language used to solve it.
