@@ -15,3 +15,19 @@ The input file is used to to produce an output file: output/output.txt. The outp
 
 - /input/input.txt: The input data structure. See the question constraints.
 - /output/output.txt The output data structure. See the question constraints.
+
+
+
+
+## Algorithm 
+
+Step 1: Sort L in descending order of the ratio (Σ_{j=1}^{N_i} S_j) / T_i for each i in L.
+Step 2a: Sort B_i in descending order of S_j for each j in B_i.
+Step 2b: Set K_i = min(K_i, M_i * D).
+Step 2c: If j is in the tracking list of books already scanned, continue to the next book.
+
+2. Otherwise, add book j to the tracking list of books already scanned. This step can be expressed as follows:
+
+Step 2d: Add j to the tracking list of books already scanned.
+
+
