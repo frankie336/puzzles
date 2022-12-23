@@ -20,8 +20,8 @@ class Interface(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'book_scores') and
                 callable(subclass.book_scores) and
 
-                hasattr(subclass, 'checks_library_desc_vert_struct') and
-                callable(subclass.checks_library_desc_vert_struct) and
+                hasattr(subclass, 'checks_book_sets') and
+                callable(subclass.checks_book_sets) and
 
                 hasattr(subclass, 'get_descriptions') and
                 callable(subclass.get_descriptions) and
@@ -84,7 +84,7 @@ class Interface(metaclass=abc.ABCMeta):
         raise NotImplemented
 
     @abc.abstractmethod
-    def checks_library_desc_vert_struct(self):
+    def checks_book_sets(self):
         """
         Lines [2:x] contains L sections of two lines per library that describe:
 
@@ -124,9 +124,7 @@ class Interface(metaclass=abc.ABCMeta):
     def signup_order(self):
         """
         This method selects the order in which libraries are selected for the signup process:
-        f(x) = ∑i∈L (Vi * xi)
-        Subject to the following constraint:
-        ∑i∈L (Ti * xi) <= D
+        Step 1: Sort L in descending order of the ratio (Σ_{j=1}^{N_i} S_j) / T_i for each i in L.
         """
         raise NotImplemented
 
@@ -303,7 +301,7 @@ class BookScanning(Interface):
 
         return remainder == 0
 
-    def checks_library_desc_vert_struct(self):
+    def checks_book_sets(self):
         """
         -Checks for empty lines
         Lines [2:x] contains L sections of two lines per library that describe:
@@ -437,9 +435,6 @@ class BookScanning(Interface):
         libraries = self.header_line()["Libraries"]
         print(libraries, "Libraries")
 
-
-
-
         """
         Gets the books per library
         """
@@ -455,9 +450,7 @@ class BookScanning(Interface):
     def signup_order(self):
         """
         This method selects the order in which libraries are selected for the signup process:
-        f(x) = ∑i∈L (Vi * xi)
-        Subject to the following constraint:
-        ∑i∈L (Ti * xi) <= D
+        Step 1: Sort L in descending order of the ratio (Σ_{j=1}^{N_i} S_j) / T_i for each i in L.
         """
         header_line = self.header_line()
 
@@ -498,6 +491,7 @@ class BookScanning(Interface):
             library_values.append(value)
 
         library_values_dict = {i: x for i, x in enumerate(library_values)}
+
         library_values_dict = dict(sorted(library_values_dict.items(), key=lambda item: item[1], reverse=True))
 
         """
