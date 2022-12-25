@@ -88,6 +88,7 @@ class SmartPhones(Interface):
         self.factory_dict = {}
         self.grid = []
         self.input_file = input_file
+        self.tasks_list = []
 
 
     def reads_text(self, file_name: str) -> str:
@@ -194,24 +195,13 @@ class SmartPhones(Interface):
         """
         Initialises a w * h grid
         """
-        w = self.width
-        h = self.height
+        nx, ny = self.width,self.height
 
-        #the_grid = np.full((h, w), "E", dtype=object)
-        the_grid= [['E' for _ in range(w)] for _ in range(h)]
+        # Generate the grid of coordinates
+        x, y = np.meshgrid(range(nx), range(ny))
 
-        the_grid[1][1] = 'M'
-        the_grid[1][3] = 'M'
-
-
-        self.grid = the_grid
-
-        print(self.grid)
-
-        for row in self.grid:
-            print(row)
-
-        time.sleep(1000)
+        # Create a 2D array with the same dimensions as the grid and fill it with the value "E"
+        self.grid = np.full((ny, nx), "E")
 
 
 
@@ -236,36 +226,11 @@ class SmartPhones(Interface):
             x = int(mount.split(' ')[0])
             y = int(mount.split(' ')[-1])
 
-            self.grid[x][y] = 'M'
+            self.grid[y][x] = 'M'
 
-        print(self.grid[3][2],'@@@@')
-
-        print(self.grid)
-
-        #for x in self.grid:
-            #print(x)
-
-        #for row in reversed(self.grid):
-            #print(row)
-
-
-
-
-
-
-
-
-        #print(self.grid)
-
-        indices = np.where(self.grid == 'M')
-        print(indices,'<--Found in np' )
-        print(mount_points,'<--Should be =M')
-
-
-
-
-
-
+        #print(self.grid[2][3],'@@@@')
+        #arr_reversed = self.grid[::-1]
+        #print(arr_reversed)
 
 
 
@@ -286,6 +251,7 @@ class SmartPhones(Interface):
 
         tasks = [x.strip() for x in tasks]
         tasks = [tasks[i:i + 2] for i in range(0, len(tasks), 2)]
+        self.tasks_list.extend(tasks)
 
         for i, inner_list in enumerate(tasks):
 
@@ -323,12 +289,22 @@ class SmartPhones(Interface):
                 x = int(assembly[0])
                 y = int(assembly[1])
 
-                #self.grid[y][x] = 'A'
+                self.grid[y][x] = 'A'
+
+        arr_reversed = self.grid[::-1]
+        print(arr_reversed)
 
 
 
-        #for lst in reversed(self.grid):
-            #print(lst)
+
+
+
+
+
+
+
+
+
 
 
 
