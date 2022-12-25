@@ -171,7 +171,7 @@ class Interface(metaclass=abc.ABCMeta):
 
 
 class BookScanning(Interface):
-    correct_space_pattern = r'([^\s]+)'
+    CORRECT_SPACE_PATTERN = r'([^\s]+)'
 
     def __init__(self):
 
@@ -201,9 +201,11 @@ class BookScanning(Interface):
         """
         first_line = self.reads_text(file_name='input/input.txt')[0]
 
-        first_line = re.findall(self.correct_space_pattern, first_line)
+        first_line = re.findall(self.CORRECT_SPACE_PATTERN, first_line)
 
-        if len(first_line) != 3:
+        digits = len(first_line)
+
+        if digits != 3 or digits > 3:
             print(error_handles[0])
             return
         else:
@@ -254,7 +256,7 @@ class BookScanning(Interface):
 
         number_of_books = self.header_line()["Books"]
 
-        book_list = re.findall(self.correct_space_pattern, sec_line)
+        book_list = re.findall(self.CORRECT_SPACE_PATTERN, sec_line)
 
         """
         The size of S is equal to the number of books. 
@@ -366,8 +368,8 @@ class BookScanning(Interface):
 
         for index, describe in enumerate(nested_vert):
 
-            lib_desc = re.findall(self.correct_space_pattern, describe[0])
-            book_id = re.findall(self.correct_space_pattern, describe[1])
+            lib_desc = re.findall(self.CORRECT_SPACE_PATTERN, describe[0])
+            book_id = re.findall(self.CORRECT_SPACE_PATTERN, describe[1])
 
             try:
                 lib_desc = [int(x) for x in lib_desc]
@@ -426,14 +428,7 @@ class BookScanning(Interface):
         • Returns nested list of books per library
         """
 
-        books = self.header_line()["Books"]
-        print(books, "Books")
-
-        days = self.header_line()["Days"]
-        print(days, "Days")
-
         libraries = self.header_line()["Libraries"]
-        print(libraries, "Libraries")
 
         """
         Gets the books per library

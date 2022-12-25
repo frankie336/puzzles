@@ -10,6 +10,7 @@ from book_scanning import BookScanning
 def main():
 
     run = BookScanning()
+
     run.submission_file()
 
 if __name__ == "__main__":

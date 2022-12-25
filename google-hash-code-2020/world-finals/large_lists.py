@@ -3,8 +3,8 @@
 This list contains error messages that will be used to diagnose faults, and issues  with the data input file.
 """
 error_handles = ["\nThe first line of the of input file is malformed.\n"
-                 "The first line should be three integers separated by a space:\n"
-                 "[n1 n2 n3]\n"
+                 "The first line should be six integers separated by a space:\n"
+                 "[n0 n1 n2 n3 n4 n5]\n"
                  "Possible causes include:\n"
                  "• Insufficient data\n"
                  "• Incorrect data\n"
@@ -14,8 +14,27 @@ error_handles = ["\nThe first line of the of input file is malformed.\n"
                  "• One or more characters are not numbers.\n"
                  "Terminating. Resume with a corrected input file!",
 
-                 "\nThe number of books cannot exceed 100,000!\n"
+                 "\nThe width or height cannot exceed 1000!\n"
                  "Terminating. Resume with a corrected input file!",
+
+                 "\nThe number of mount points cannot exceed 1000!\n"
+                 "Terminating. Resume with a corrected input file!",
+
+                 "\nThe number of number of tasks available cannot exceed 1000!\n"
+                 "Terminating. Resume with a corrected input file!",
+
+                 "\nThe number of robotic arms available cannot exceed 100!\n"
+                 "Terminating. Resume with a corrected input file!",
+
+                 "\nThe number of total steps for the assembly process cannot exceed 10000!\n"
+                 "Terminating. Resume with a corrected input file!",
+
+                 "\nThe score points per task cannot exceed 1000000!\n"
+                 "Terminating. Resume with a corrected input file!",
+
+                 "\nAssembly points cannot exceed 1000!\n"
+                 "Terminating. Resume with a corrected input file!",
+
 
                  "\nThe number of libraries cannot exceed 100,000!\n"
                  "Terminating. Resume with a corrected input file!",
