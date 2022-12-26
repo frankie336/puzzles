@@ -14,7 +14,18 @@ def main():
     run.the_grid()
     run.mount_points()
     run.get_tasks()
+    run.task_ranking()
+    run.where_robotic_arms_installed()
+
+
+a = "a_example.txt"
+b = "b_single_arm.txt"
+c = "c_few_arms.txt"
+d = "d_tight_schedule.txt"
+e = "e_dense_workspace.txt"
+f = "f_decentralized.txt"
 
 if __name__ == "__main__":
-    input_file = "input/final_round_2020.in/a_example.txt"
+    input_file = "input/final_round_2020.in/"+a
     main()
+

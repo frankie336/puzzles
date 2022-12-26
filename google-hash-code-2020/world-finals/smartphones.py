@@ -3,7 +3,7 @@ import abc
 import time
 import re
 import numpy as np
-
+from collections import defaultdict
 
 
 class Interface(metaclass=abc.ABCMeta):
@@ -21,7 +21,13 @@ class Interface(metaclass=abc.ABCMeta):
                 callable(subclass.mount_points) and
 
                 hasattr(subclass, 'get_tasks') and
-                callable(subclass.get_tasks) or
+                callable(subclass.get_tasks) and
+
+                hasattr(subclass, 'task_ranking') and
+                callable(subclass.tasks_ranking) and
+
+                hasattr(subclass, 'where_robotic_arms_installed') and
+                callable(subclass.where_robotic_arms_installed) or
 
                 NotImplemented)
 
@@ -52,6 +58,8 @@ class Interface(metaclass=abc.ABCMeta):
         Initialises a w * h grid
         """
 
+        raise NotImplemented
+
 
     @abc.abstractmethod
     def mount_points(self):
@@ -61,6 +69,7 @@ class Interface(metaclass=abc.ABCMeta):
          • Checks constraints
          • x ( 0 ≤ x < W ) and y ( 0 ≤ y < H ) describing the coordinates
         """
+        raise NotImplemented
 
 
     @abc.abstractmethod
@@ -73,6 +82,29 @@ class Interface(metaclass=abc.ABCMeta):
         • S ( 1 ≤ S ≤ 10**6 )  P ( 1 ≤ P ≤ 10  **3)  ← First line
         • x 0 , y 0 , x 1 , y 1 , ..., x P-1 , y P-1  ← Second line
         """
+        raise NotImplemented
+
+    @abc.abstractmethod
+    def task_ranking(self):
+        """
+        • Ranks task value
+        """
+        raise NotImplemented
+
+
+
+
+    @abc.abstractmethod
+    def where_robotic_arms_installed(self):
+        """
+        • A modified Dijkstra's algorithm
+        • Calculates the most optimal mount points per task+assembly points
+        • Optimum mount points = where arms are installed
+        • Number of arms  = min(arms,optimums)
+        • In effect, ranks mount points
+        • returns ordered list
+        """
+        raise NotImplemented
 
 
 
@@ -89,6 +121,7 @@ class SmartPhones(Interface):
         self.grid = []
         self.input_file = input_file
         self.tasks_list = []
+        self.ranked_assembly_points = []
 
 
     def reads_text(self, file_name: str) -> str:
@@ -293,6 +326,132 @@ class SmartPhones(Interface):
 
         arr_reversed = self.grid[::-1]
         print(arr_reversed)
+
+
+
+    def task_ranking(self):
+        """
+        • Ranks task value
+        """
+        task_number = self.factory_dict["tasks"]
+
+        task_scores = []
+
+        print(self.tasks_list)
+
+        scores_list = [element[0].split()[0] for element in self.tasks_list]
+
+        for s in scores_list:
+
+            score = int(s)/task_number
+            task_scores.append(score)
+
+
+
+        task_ranking_dict = {i: element for i, element in enumerate(task_scores)}
+        task_ranking_dict = sorted(task_ranking_dict.items(), key=lambda x: x[1], reverse=True)
+        task_ranking_dict = dict(task_ranking_dict)
+
+        print(task_ranking_dict)
+
+        print(self.tasks_list)
+
+        print(self.grid)
+
+        return task_ranking_dict
+
+
+
+
+
+    def where_robotic_arms_installed(self):
+        """
+        • A modified Dijkstra's algorithm
+        • Calculates the most optimal mount points per task+assembly points
+        • Optimum mount points = where arms are installed
+        • Number of arms  = min(arms,optimums)
+        • In effect, ranks mount points
+        • returns ordered list
+        """
+
+        assemly_list = [[element[1]] for element in self.tasks_list]
+        assemly_list = [element[0].replace(' ', '') for element in assemly_list]
+        assemly_list =  [re.findall(r'\d{2}', element) for element in assemly_list]
+
+        """
+        Covert the assembly lists to coordinates 
+        """
+        assembly_point_list = []
+
+        ranked_assembly_points = []
+
+        for inner_list in assemly_list:
+            new_inner_list = []
+            for element in inner_list:
+                new_inner_list.append([int(x) for x in element])
+            assembly_point_list.append(new_inner_list)
+
+        assembly_point_list = [[[int(x[1]), int(x[0])] for x in element] for element in assembly_point_list]#NUMBERS REVERSED
+
+        grid = self.grid
+
+        #define the mount points
+        mount_points = np.argwhere(grid == 'M')
+
+        for point in assembly_point_list:
+
+            assembly_points = point
+
+            print(f"Assembly points: {assembly_points}")
+
+            # create an array to store the shortest path for each arm
+            shortest_paths = np.full((len(mount_points), len(assembly_points)), np.inf)
+
+            # initialize the first column of the shortest_paths array with the distance from each mount point to the first assembly point
+            shortest_paths[:, 0] = np.abs(mount_points[:, 0] - assembly_points[0][0]) + np.abs(mount_points[:, 1] - assembly_points[0][1])
+
+            # iterate through the rest of the assembly points and update the shortest_paths array
+            for i in range(1, len(assembly_points)):
+                for j in range(len(mount_points)):
+                    shortest_paths[j, i] = min(
+                        shortest_paths[j, i - 1] + np.abs(mount_points[j, 0] - assembly_points[i][0]) + np.abs(
+                            mount_points[j, 1] - assembly_points[i][1]),
+                        shortest_paths[j, i])
+
+
+
+            # get the indices of the sorted shortest paths array
+            sorted_indices = np.argsort(shortest_paths, axis=0)
+
+            # get the optimal mount points in order
+            optimal_mount_points = mount_points[sorted_indices]
+
+            max_arms = self.factory_dict["arms"]
+            optimal_mount_points = optimal_mount_points[:max_arms]
+
+            print(f"Optimal mount points: {optimal_mount_points}")
+
+            print(len(optimal_mount_points), '<-----')
+
+            ranked_assembly_points.append(assembly_points)
+
+
+
+        ranked_assembly_points = ranked_assembly_points[:max_arms]
+        self.ranked_assembly_points.extend(ranked_assembly_points)
+
+        print(self.ranked_assembly_points,'<----')
+
+
+
+
+
+
+
+
+
+
+
 
 
 
