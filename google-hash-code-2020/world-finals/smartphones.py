@@ -100,6 +100,8 @@ class Interface(metaclass=abc.ABCMeta):
         """
         • Calculates globally optimum mount points * available robot arms
         • Mixed-integer programming (MIP)
+        • mount points for the given assembly points, based on their distances from the mount points using Euclidean distance
+
 
         1. Define the decision variables:
           • For each mount point, create a binary variable x[i] that represents whether a robot arm is placed at the mount point.
@@ -394,6 +396,7 @@ class SmartPhones(Interface):
         """
         • Calculates globally optimum mount points * available robot arms
         • Mixed-integer programming (MIP)
+        • mount points for the given assembly points, based on their distances from the mount points using Euclidean distance
 
         1. Define the decision variables:
           • For each mount point, create a binary variable x[i] that represents whether a robot arm is placed at the mount point.
