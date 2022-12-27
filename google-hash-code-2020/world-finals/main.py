@@ -14,8 +14,9 @@ def main():
     run.the_grid()
     run.mount_points()
     run.get_tasks()
-    run.task_ranking()
-    run.where_robotic_arms_installed()
+    run.assembly_points_to_scores()
+    #run.optimum_mount_points_per_task()
+    run.globally_optimum_mount_points()
 
 
 a = "a_example.txt"

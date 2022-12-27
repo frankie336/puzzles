@@ -23,11 +23,11 @@ class Interface(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'get_tasks') and
                 callable(subclass.get_tasks) and
 
-                hasattr(subclass, 'task_ranking') and
+                hasattr(subclass, 'assembly_points_to_scores') and
                 callable(subclass.tasks_ranking) and
 
-                hasattr(subclass, 'where_robotic_arms_installed') and
-                callable(subclass.where_robotic_arms_installed) or
+                hasattr(subclass, 'globally_optimum_mount_points') and
+                callable(subclass.globally_optimum_mount_points) or
 
                 NotImplemented)
 
@@ -85,7 +85,7 @@ class Interface(metaclass=abc.ABCMeta):
         raise NotImplemented
 
     @abc.abstractmethod
-    def task_ranking(self):
+    def assembly_points_to_scores(self):
         """
         • Ranks task value
         """
@@ -95,14 +95,27 @@ class Interface(metaclass=abc.ABCMeta):
 
 
     @abc.abstractmethod
-    def where_robotic_arms_installed(self):
+    def globally_optimum_mount_points(self):
+
         """
-        • A modified Dijkstra's algorithm
-        • Calculates the most optimal mount points per task+assembly points
-        • Optimum mount points = where arms are installed
-        • Number of arms  = min(arms,optimums)
-        • In effect, ranks mount points
-        • returns ordered list
+        • Calculates globally optimum mount points * available robot arms
+        • Mixed-integer programming (MIP)
+
+        1. Define the decision variables:
+          • For each mount point, create a binary variable x[i] that represents whether a robot arm is placed at the mount point.
+          • For each task, create an integer variable y[i] that represents the number of robot arms used for the task.
+
+        2. Define the objective function:
+          • The objective is to maximize the total score for all tasks, so the objective function would be:
+          maximize sum(score[i] * y[i] for i in tasks)
+
+        3. Define the constraints:
+          • For each task, ensure that the number of robot arms used is less than or equal to the maximum number of arms:
+            y[i] <= max_arms
+
+        • For each assembly point, ensure that at least one robot arm is placed within 4 cells of the assembly point:
+          sum(x[j] for j in mount_points if distance(assembly_point[i], mount_point[j]) <= 4) >= 1
+
         """
         raise NotImplemented
 
@@ -122,6 +135,8 @@ class SmartPhones(Interface):
         self.input_file = input_file
         self.tasks_list = []
         self.ranked_assembly_points = []
+        self.optimal_mount_points_list= []
+        self.task_assembly_points = []
 
 
     def reads_text(self, file_name: str) -> str:
@@ -239,6 +254,7 @@ class SmartPhones(Interface):
 
 
 
+
     def mount_points(self):
         """
          • Gets the mount points from the input file
@@ -259,8 +275,9 @@ class SmartPhones(Interface):
             x = int(mount.split(' ')[0])
             y = int(mount.split(' ')[-1])
 
-            self.grid[y][x] = 'M'
+            self.grid[y][x] = "M"
 
+        #print(self.grid)
         #print(self.grid[2][3],'@@@@')
         #arr_reversed = self.grid[::-1]
         #print(arr_reversed)
@@ -292,9 +309,8 @@ class SmartPhones(Interface):
 
                 score = int(element.split(' ')[0])
 
-
                 """
-                Checks he constraints here 
+                Checks the constraints here 
                 """
                 if score >10**6:
                     print(error_handles[7])
@@ -322,125 +338,155 @@ class SmartPhones(Interface):
                 x = int(assembly[0])
                 y = int(assembly[1])
 
-                self.grid[y][x] = 'A'
+                self.grid[y][x] = "A"
 
         arr_reversed = self.grid[::-1]
-        print(arr_reversed)
+        #print(arr_reversed)
 
 
 
-    def task_ranking(self):
+    def assembly_points_to_scores(self):
         """
-        • Ranks task value
+        • Maps Task Assembly Points to scores by combing both in a list of tuples
         """
-        task_number = self.factory_dict["tasks"]
 
-        task_scores = []
 
-        print(self.tasks_list)
-
+        """
+        split score list
+        """
         scores_list = [element[0].split()[0] for element in self.tasks_list]
 
-        for s in scores_list:
-
-            score = int(s)/task_number
-            task_scores.append(score)
-
-
-
-        task_ranking_dict = {i: element for i, element in enumerate(task_scores)}
-        task_ranking_dict = sorted(task_ranking_dict.items(), key=lambda x: x[1], reverse=True)
-        task_ranking_dict = dict(task_ranking_dict)
-
-        print(task_ranking_dict)
-
-        print(self.tasks_list)
-
-        print(self.grid)
-
-        return task_ranking_dict
-
-
-
-
-
-    def where_robotic_arms_installed(self):
-        """
-        • A modified Dijkstra's algorithm
-        • Calculates the most optimal mount points per task+assembly points
-        • Optimum mount points = where arms are installed
-        • Number of arms  = min(arms,optimums)
-        • In effect, ranks mount points
-        • returns ordered list
-        """
-
-        assemly_list = [[element[1]] for element in self.tasks_list]
-        assemly_list = [element[0].replace(' ', '') for element in assemly_list]
-        assemly_list =  [re.findall(r'\d{2}', element) for element in assemly_list]
 
         """
-        Covert the assembly lists to coordinates 
+        splitting and converting the assembly list
+        to usable coordinates 
+        
+        Convert the assembly lists to coordinates  
         """
+        assemly_list = [[element[1]] for element in self.tasks_list]#1
+        assemly_list = [element[0].replace(' ', '') for element in assemly_list]#2
+        assemly_list = [re.findall(r'\d{2}', element) for element in assemly_list]#3
+
+
         assembly_point_list = []
-
-        ranked_assembly_points = []
 
         for inner_list in assemly_list:
             new_inner_list = []
+
             for element in inner_list:
                 new_inner_list.append([int(x) for x in element])
             assembly_point_list.append(new_inner_list)
 
-        assembly_point_list = [[[int(x[1]), int(x[0])] for x in element] for element in assembly_point_list]#NUMBERS REVERSED
+        assembly_locations = [[[int(x[1]), int(x[0])] for x in element] for element in assembly_point_list]#NUMBERS REVERSED
+
+
+        """
+        Combine assembly locations and scores to form structure:
+        [([[3, 2], [3, 3]], 10), ([[0, 4]], 5), ([[3, 3]], 1)]
+        """
+        scores = [(x,) for x in scores_list]
+        self.task_assembly_points = [(ap, int(score[0])) for ap, score in zip(assembly_locations, scores)]
+
+
+
+
+    def globally_optimum_mount_points(self):
+        """
+        • Calculates globally optimum mount points * available robot arms
+        • Mixed-integer programming (MIP)
+
+        1. Define the decision variables:
+          • For each mount point, create a binary variable x[i] that represents whether a robot arm is placed at the mount point.
+          • For each task, create an integer variable y[i] that represents the number of robot arms used for the task.
+
+        2. Define the objective function:
+          • The objective is to maximize the total score for all tasks, so the objective function would be:
+          maximize sum(score[i] * y[i] for i in tasks)
+
+        3. Define the constraints:
+          • For each task, ensure that the number of robot arms used is less than or equal to the maximum number of arms:
+            y[i] <= max_arms
+
+        • For each assembly point, ensure that at least one robot arm is placed within 4 cells of the assembly point:
+          sum(x[j] for j in mount_points if distance(assembly_point[i], mount_point[j]) <= 4) >= 1
+
+        """
+
+        tasks = self.task_assembly_points
+        print(tasks, '<-----Assembly Points + Scores')
 
         grid = self.grid
+        arr_reversed = self.grid[::-1]#printing the grid in reverse is cosmentic
+        print(arr_reversed)
 
-        #define the mount points
+        max_arms = self.factory_dict["arms"]
+
         mount_points = np.argwhere(grid == 'M')
 
-        for point in assembly_point_list:
+        scores = []
 
-            assembly_points = point
+        optimal_mount_points_list = []
 
-            print(f"Assembly points: {assembly_points}")
+        for task_id, task in enumerate(tasks):
+            assembly_points, score = task
 
-            # create an array to store the shortest path for each arm
-            shortest_paths = np.full((len(mount_points), len(assembly_points)), np.inf)
+            optimal_mount_points = []
 
-            # initialize the first column of the shortest_paths array with the distance from each mount point to the first assembly point
-            shortest_paths[:, 0] = np.abs(mount_points[:, 0] - assembly_points[0][0]) + np.abs(mount_points[:, 1] - assembly_points[0][1])
+            for assembly_point in assembly_points:
+                shortest_paths = np.full((len(mount_points), 1), np.inf)
 
-            # iterate through the rest of the assembly points and update the shortest_paths array
-            for i in range(1, len(assembly_points)):
-                for j in range(len(mount_points)):
-                    shortest_paths[j, i] = min(
-                        shortest_paths[j, i - 1] + np.abs(mount_points[j, 0] - assembly_points[i][0]) + np.abs(
-                            mount_points[j, 1] - assembly_points[i][1]),
-                        shortest_paths[j, i])
+                shortest_paths[:, 0] = np.sqrt(
+                    (mount_points[:, 0] - assembly_point[0]) ** 2 + (mount_points[:, 1] - assembly_point[1]) ** 2)
 
+                sorted_indices = np.argsort(shortest_paths, axis=0)
+                optimal_mount_points.append(mount_points[sorted_indices])
 
+            optimal_mount_points = np.concatenate(optimal_mount_points)
+            num_arms = min(max_arms, len(optimal_mount_points))
 
-            # get the indices of the sorted shortest paths array
-            sorted_indices = np.argsort(shortest_paths, axis=0)
+            scores.append(score * num_arms)
 
-            # get the optimal mount points in order
-            optimal_mount_points = mount_points[sorted_indices]
-
-            max_arms = self.factory_dict["arms"]
-            optimal_mount_points = optimal_mount_points[:max_arms]
-
-            print(f"Optimal mount points: {optimal_mount_points}")
-
-            print(len(optimal_mount_points), '<-----')
-
-            ranked_assembly_points.append(assembly_points)
+            optimal_mount_points_list.append(optimal_mount_points[:num_arms])
 
 
+        optimal_mount_points_list = [x.tolist() for x in optimal_mount_points_list]
 
-        ranked_assembly_points = ranked_assembly_points[:max_arms]
-        self.ranked_assembly_points.extend(ranked_assembly_points)
+        max_opt = len(optimal_mount_points)
 
-        print(self.ranked_assembly_points,'<----')
+        max_arms_range = min(max_arms,max_opt)
+
+        optimal_mount_points_list = optimal_mount_points_list[0]
+
+        self.optimal_mount_points_list = optimal_mount_points_list
+
+        print(scores,'<----Scores')
+        print(self.optimal_mount_points_list,'<------Optimal Mounts')
+        print(len(self.optimal_mount_points_list),'<----Number of robot arms deployed')
+
+        #return scores, optimal_mount_points_list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
