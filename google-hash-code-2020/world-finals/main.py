@@ -18,7 +18,7 @@ def main():
     run.globally_optimum_mount_points()
     run.assign_robot_arms()
     run.work_scheduler()
-    #run.robot_worker()
+    run.robot_worker()
 
 
 a = "a_example.txt"

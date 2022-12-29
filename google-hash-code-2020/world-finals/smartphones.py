@@ -564,13 +564,6 @@ class SmartPhones(Interface):
 
 
 
-
-
-
-
-
-
-
     def move(self,pos, direction):
         x, y = pos
         if direction == "up":
@@ -630,16 +623,42 @@ class SmartPhones(Interface):
 
         :return:
         """
+        print(self.grid[2][3],'<---yes it is a robot')
+
         room = self.grid
         print("\n")
         for row in reversed(self.grid):
-            print(row,'<----Robots working on this grid')
+            print(row, '<----Robots working on this grid')
+
+
+        for key, value in self.global_schedule_dict.items():
+            for inner_item in value:
+                print(inner_item,'<-----robot task')
+                print(key, '<-----robot location')
+
+                assembly = inner_item[1]
+                print(assembly,'<--- assembly')
+
+                for cell in assembly:
+                    print(cell,'<----celll')
+                    x,y = cell[0],cell[1]
+
+                    start = key
+                    target = (x,y)
+
+                    moves = self.automate_movement(start, target)
+                    print(moves)
+
+                    time.sleep(1000)
+
+
+
+
 
         test_start = self.grid[3][1]
 
         # Initialize starting and target positions
         start = (3,2)
-
         target = (3, 3)
 
         # Calculate the shortest path from the start position to the target position
