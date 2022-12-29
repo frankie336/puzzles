@@ -27,7 +27,14 @@ class Interface(metaclass=abc.ABCMeta):
                 callable(subclass.tasks_ranking) and
 
                 hasattr(subclass, 'globally_optimum_mount_points') and
-                callable(subclass.globally_optimum_mount_points) or
+                callable(subclass.globally_optimum_mount_points) and
+
+
+                hasattr(subclass, 'assign_robot_arms') and
+                callable(subclass.assign_robot_arms) and
+
+                hasattr(subclass, 'robot_worker') and
+                callable(subclass.robot_worker) or
 
                 NotImplemented)
 
@@ -96,28 +103,28 @@ class Interface(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def globally_optimum_mount_points(self):
-
         """
-        • Calculates globally optimum mount points * available robot arms
-        • Mixed-integer programming (MIP)
-        • mount points for the given assembly points, based on their distances from the mount points using Euclidean distance
+        • Euclidean distance between the mount point and the first assembly point of each task:
+         (x1, y1) and (x2, y2) is calculated as sqrt((x1 - x2)**2 + (y1 – y2)**2)
+        • Sets the globally optimum mount point list object
+        """
+        raise NotImplemented
 
 
-        1. Define the decision variables:
-          • For each mount point, create a binary variable x[i] that represents whether a robot arm is placed at the mount point.
-          • For each task, create an integer variable y[i] that represents the number of robot arms used for the task.
+    @abc.abstractmethod
+    def assign_robot_arms(self):
+        """
 
-        2. Define the objective function:
-          • The objective is to maximize the total score for all tasks, so the objective function would be:
-          maximize sum(score[i] * y[i] for i in tasks)
+        Assigns robot arms to optimised mount point s
+        """
+        raise NotImplemented
 
-        3. Define the constraints:
-          • For each task, ensure that the number of robot arms used is less than or equal to the maximum number of arms:
-            y[i] <= max_arms
 
-        • For each assembly point, ensure that at least one robot arm is placed within 4 cells of the assembly point:
-          sum(x[j] for j in mount_points if distance(assembly_point[i], mount_point[j]) <= 4) >= 1
+    @abc.abstractmethod
+    def robot_worker(self):
+        """
 
+        :return:
         """
         raise NotImplemented
 
@@ -137,7 +144,7 @@ class SmartPhones(Interface):
         self.input_file = input_file
         self.tasks_list = []
         self.ranked_assembly_points = []
-        self.optimal_mount_points_list= []
+        self.global_mount_point_list = []
         self.task_assembly_points = []
 
 
@@ -247,11 +254,13 @@ class SmartPhones(Interface):
         """
         nx, ny = self.width,self.height
 
-        # Generate the grid of coordinates
-        x, y = np.meshgrid(range(nx), range(ny))
+        self.grid = [[0 for _ in range(nx)] for _ in range(ny)]
 
-        # Create a 2D array with the same dimensions as the grid and fill it with the value "E"
-        self.grid = np.full((ny, nx), "E")
+        for row in self.grid:
+            print(row,'<--The original grid')
+        print('\n')
+
+
 
 
 
@@ -277,12 +286,12 @@ class SmartPhones(Interface):
             x = int(mount.split(' ')[0])
             y = int(mount.split(' ')[-1])
 
-            self.grid[y][x] = "M"
+            self.grid[y][x] = 1
 
-        #print(self.grid)
-        #print(self.grid[2][3],'@@@@')
-        #arr_reversed = self.grid[::-1]
-        #print(arr_reversed)
+        for row in  reversed(self.grid):
+            print(row,'<---The lists with 1 for mounts. Row order reversed')
+        print("\n")
+
 
 
 
@@ -296,6 +305,7 @@ class SmartPhones(Interface):
         • Assigns the assembly points to the grid
         • S ( 1 ≤ S ≤ 10**6 )  P ( 1 ≤ P ≤ 10  **3)  ← First line
         • x 0 , y 0 , x 1 , y 1 , ..., x P-1 , y P-1  ← Second line
+        • Makes a list of tasks
         """
         point_range = 1 + self.factory_dict["mount_points"]
 
@@ -303,7 +313,12 @@ class SmartPhones(Interface):
 
         tasks = [x.strip() for x in tasks]
         tasks = [tasks[i:i + 2] for i in range(0, len(tasks), 2)]
+
         self.tasks_list.extend(tasks)
+
+        print(self.tasks_list,'\n','<---score, # assemblies, assembly references')
+        print("\n")
+
 
         for i, inner_list in enumerate(tasks):
 
@@ -339,11 +354,14 @@ class SmartPhones(Interface):
 
                 x = int(assembly[0])
                 y = int(assembly[1])
+                self.grid[y][x] = 2
 
-                self.grid[y][x] = "A"
 
-        arr_reversed = self.grid[::-1]
-        #print(arr_reversed)
+        for row in reversed(self.grid):
+            print(row, '<---The lists with 2 for assembly points. Row order reversed')
+
+        for row in self.grid:
+            print(row,'<---None reversed grid')
 
 
 
@@ -389,84 +407,154 @@ class SmartPhones(Interface):
         scores = [(x,) for x in scores_list]
         self.task_assembly_points = [(ap, int(score[0])) for ap, score in zip(assembly_locations, scores)]
 
+        print('\n',self.task_assembly_points,'<----Tasks, assembly points, and scores!')
+
 
 
 
     def globally_optimum_mount_points(self):
         """
-        • Calculates globally optimum mount points * available robot arms
-        • Mixed-integer programming (MIP)
-        • mount points for the given assembly points, based on their distances from the mount points using Euclidean distance
+        • Euclidean distance between the mount point and the first assembly point of each task:
+         (x1, y1) and (x2, y2) is calculated as sqrt((x1 - x2)**2 + (y1 – y2)**2)
+        • Sets the globally optimum mount point list object
+        """
+        tasks_assembly = sorted(self.task_assembly_points, key=lambda x: x[1], reverse=True)
 
-        1. Define the decision variables:
-          • For each mount point, create a binary variable x[i] that represents whether a robot arm is placed at the mount point.
-          • For each task, create an integer variable y[i] that represents the number of robot arms used for the task.
+        print(tasks_assembly, '<-----Assembly Points + Scores')
 
-        2. Define the objective function:
-          • The objective is to maximize the total score for all tasks, so the objective function would be:
-          maximize sum(score[i] * y[i] for i in tasks)
+        mount_points = []
 
-        3. Define the constraints:
-          • For each task, ensure that the number of robot arms used is less than or equal to the maximum number of arms:
-            y[i] <= max_arms
-
-        • For each assembly point, ensure that at least one robot arm is placed within 4 cells of the assembly point:
-          sum(x[j] for j in mount_points if distance(assembly_point[i], mount_point[j]) <= 4) >= 1
+        # Iterate the tasks
+        for task in tasks_assembly:
+            # Get the assembly points of the task
+            assembly_points = task[0]
+            # Find the mount point closest to the assembly points
+            closest_mount_point = None
+            closest_distance = float("inf")
+            for assembly_point in assembly_points:
+                for i in range(len(self.grid)):
+                    for j in range(len(self.grid[0])):
+                        if self.grid[i][j] == 1:  # Check if the current cell is a mount point
+                            # Calculate the distance between the assembly point and the mount point
+                            distance = abs(i - assembly_point[0]) + abs(j - assembly_point[1])
+                            if distance < closest_distance:  # Update the closest mount point if the current mount point is closer
+                                closest_mount_point = (i, j)
+                                closest_distance = distance
+            # Add the closest mount point to the list
+            mount_points.append(closest_mount_point)
 
         """
+        make a list that removes duplicate entries since mounts can be used once
+        
+        Further filter this list to the first n number of mounts where n is the number of 
+        robot arms   
+        """
+        arms_number = self.factory_dict["arms"]
+        unique_optimal_mounts = [x for i, x in enumerate(mount_points) if x not in mount_points[:i]]
+        unique_optimal_mounts = unique_optimal_mounts[:arms_number]
 
-        tasks = self.task_assembly_points
-        print(tasks, '<-----Assembly Points + Scores')
-
-        grid = self.grid
-        arr_reversed = self.grid[::-1]#printing the grid in reverse is cosmentic
-        print(arr_reversed)
-
-        max_arms = self.factory_dict["arms"]
-
-        mount_points = np.argwhere(grid == 'M')
-
-        scores = []
-
-        optimal_mount_points_list = []
-
-        for task_id, task in enumerate(tasks):
-            assembly_points, score = task
-
-            optimal_mount_points = []
-
-            for assembly_point in assembly_points:
-                shortest_paths = np.full((len(mount_points), 1), np.inf)
-
-                shortest_paths[:, 0] = np.sqrt(
-                    (mount_points[:, 0] - assembly_point[0]) ** 2 + (mount_points[:, 1] - assembly_point[1]) ** 2)
-
-                sorted_indices = np.argsort(shortest_paths, axis=0)
-                optimal_mount_points.append(mount_points[sorted_indices])
-
-            optimal_mount_points = np.concatenate(optimal_mount_points)
-            num_arms = min(max_arms, len(optimal_mount_points))
-
-            scores.append(score * num_arms)
-
-            optimal_mount_points_list.append(optimal_mount_points[:num_arms])
+        """
+        Set the globally optimal mount points object
+        """
+        self.global_mount_point_list = unique_optimal_mounts
+        print(self.global_mount_point_list,'<------Globally optimum mount points')
 
 
-        optimal_mount_points_list = [x.tolist() for x in optimal_mount_points_list]
 
-        max_opt = len(optimal_mount_points)
 
-        max_arms_range = min(max_arms,max_opt)
 
-        optimal_mount_points_list = optimal_mount_points_list[0]
+    def assign_robot_arms(self):
+        """
+        Assigns robot arms to optimised mount points
+        Candidate mount points are turned to 3
+        """
+        for mount in self.global_mount_point_list:
+            for inner in self.global_mount_point_list:
 
-        self.optimal_mount_points_list = optimal_mount_points_list
+                x = inner[0]
+                y = inner[1]
+                self.grid[x][y] = 3
 
-        print(scores,'<----Scores')
-        print(self.optimal_mount_points_list,'<------Optimal Mounts')
-        print(len(self.optimal_mount_points_list),'<----Number of robot arms deployed')
+        print('\n')
+        for row in reversed(self.grid):
+            print(row,'<----Grid with robot arms added')
 
-        #return scores, optimal_mount_points_list
+
+
+
+
+    def move(self,pos, direction):
+        x, y = pos
+        if direction == "up":
+            x -= 1
+        elif direction == "down":
+            x += 1
+        elif direction == "left":
+            y -= 1
+        elif direction == "right":
+            y += 1
+        # Check if the new position is within the bounds of the room grid
+        if x < 0 or x >= len(self.grid) or y < 0 or y >= len(self.grid[0]):
+            return pos  # Return the original position if the new position is outside the room
+        # Check if the new position is a wall or a cell containing the number 2
+        if self.grid[x][y] in [1, 3]:
+            return pos  # Return the original position if the new position is a wall or a cell containing the number 2
+        return (x, y)  # Return the new position if it is a valid position within the room
+
+
+
+
+    def automate_movement(self,start, target):
+        """
+        Function to calculate the shortest
+        path from the start position to
+        the target position
+        """
+
+        # Initialize a queue to store the positions to be explored
+        queue = [(start, [])]
+        # Initialize a set to store the visited positions
+        visited = set()
+        # Iterate over the positions in the queue
+        while queue:
+            pos, moves = queue.pop(0)  # Get the current position and moves made
+            # Check if the current position is the target position
+            if pos == target:
+                return moves  # Return the moves if the current position is the target position
+            # Mark the current position as visited
+            visited.add(pos)
+            # Try moving in each direction
+            for direction in ["up", "down", "left", "right"]:
+                new_pos = self.move(pos, direction)  # Get the new position after moving in the current direction
+                if new_pos not in visited:  # Check if the new position has not been visited
+                    queue.append((new_pos, moves + [direction]))  # Add the new position and updated moves to the queue
+        return "Error: Target unreachable"  # Return an error message if the target position is not reached
+
+
+
+
+
+    def robot_worker(self):
+        """
+
+        :return:
+        """
+        room = self.grid
+        print("\n")
+        for row in reversed(self.grid):
+            print(row,'<----Robots working on this grid')
+
+        test_start = self.grid[3][1]
+
+        # Initialize starting and target positions
+        start = (3,2)
+
+        target = (3, 3)
+
+        # Calculate the shortest path from the start position to the target position
+        moves = self.automate_movement(start, target)
+        print(moves)
+
 
 
 

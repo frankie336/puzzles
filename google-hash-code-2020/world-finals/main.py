@@ -15,8 +15,9 @@ def main():
     run.mount_points()
     run.get_tasks()
     run.assembly_points_to_scores()
-    #run.optimum_mount_points_per_task()
     run.globally_optimum_mount_points()
+    run.assign_robot_arms()
+    #run.robot_worker()
 
 
 a = "a_example.txt"
