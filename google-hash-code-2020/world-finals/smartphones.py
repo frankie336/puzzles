@@ -4,6 +4,7 @@ import time
 import re
 import numpy as np
 from collections import defaultdict
+from math import sqrt
 
 
 class Interface(metaclass=abc.ABCMeta):
@@ -33,10 +34,16 @@ class Interface(metaclass=abc.ABCMeta):
                 hasattr(subclass, 'assign_robot_arms') and
                 callable(subclass.assign_robot_arms) and
 
+                hasattr(subclass, 'work_scheduler') and
+                callable(subclass.work_scheduler) and
+
                 hasattr(subclass, 'robot_worker') and
                 callable(subclass.robot_worker) or
 
                 NotImplemented)
+
+
+
 
     @abc.abstractmethod
     def reads_text(self, file_name: str) -> str:
@@ -114,8 +121,19 @@ class Interface(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def assign_robot_arms(self):
         """
+        Assigns robot arms to optimised mount points
+        """
+        raise NotImplemented
 
-        Assigns robot arms to optimised mount point s
+
+
+    @abc.abstractmethod
+    def work_scheduler(self):
+        """
+        • Schedules work among robot arms
+        • Round robin
+        • Initially assigns all tasks
+        • Tasks can be later filtered by available steps
         """
         raise NotImplemented
 
@@ -146,6 +164,7 @@ class SmartPhones(Interface):
         self.ranked_assembly_points = []
         self.global_mount_point_list = []
         self.task_assembly_points = []
+        self.global_schedule_dict = {}
 
 
     def reads_text(self, file_name: str) -> str:
@@ -402,10 +421,12 @@ class SmartPhones(Interface):
 
         """
         Combine assembly locations and scores to form structure:
-        [([[3, 2], [3, 3]], 10), ([[0, 4]], 5), ([[3, 3]], 1)]
+        [(0, [[3, 2], [3, 3]], 10), (1, [[0, 4]], 5), (2, [[3, 3]], 1)]
         """
         scores = [(x,) for x in scores_list]
         self.task_assembly_points = [(ap, int(score[0])) for ap, score in zip(assembly_locations, scores)]
+
+        self.task_assembly_points = [((i,) + task) for i, task in enumerate(self.task_assembly_points)]
 
         print('\n',self.task_assembly_points,'<----Tasks, assembly points, and scores!')
 
@@ -424,10 +445,14 @@ class SmartPhones(Interface):
 
         mount_points = []
 
+        counter = 0
+
         # Iterate the tasks
         for task in tasks_assembly:
+            counter+=1
+            print(counter,'<-----Finding global optimum mounts')
             # Get the assembly points of the task
-            assembly_points = task[0]
+            assembly_points = task[1]
             # Find the mount point closest to the assembly points
             closest_mount_point = None
             closest_distance = float("inf")
@@ -481,6 +506,69 @@ class SmartPhones(Interface):
 
 
 
+    def work_scheduler(self):
+        """
+        • Schedules work among robot arms
+        • Round robin
+        • Initially assigns all tasks
+        • Tasks can be later filtered by available steps
+        """
+
+        robot_arms = self.global_mount_point_list
+
+        tasks = self.task_assembly_points
+
+        # Dictionary to store the tasks assigned to each robot arm
+        assigned_tasks = {}
+
+        # Sort tasks by their score
+        tasks.sort(key=lambda x: x[1], reverse=True)
+
+
+        #Assign tasks to robot arms using round robin
+        for i, task in enumerate(tasks):
+            # Get the coordinates of the first assembly point
+            assembly_point = task[1][0]
+
+            # Find the robot arm closest to the assembly point
+            min_distance = float("inf")
+            min_distance_arm = None
+            for arm in robot_arms:
+                distance = sqrt((arm[0] - assembly_point[0]) ** 2 + (arm[1] - assembly_point[1]) ** 2)
+                if distance < min_distance:
+                    min_distance = distance
+                    min_distance_arm = arm
+
+            # Assign the task to the closest robot arm
+            if min_distance_arm in assigned_tasks:
+                # If the robot arm is already assigned a task, add the current task to its list of tasks
+                assigned_tasks[min_distance_arm].append(task)
+            else:
+                # If the robot arm is not assigned a task, create a new entry in the dictionary for it
+                assigned_tasks[min_distance_arm] = [task]
+
+
+        for arm, tasks in assigned_tasks.items():
+            print(f"Robot arm at {arm} is assigned tasks: {tasks}")
+
+        """
+        Reorders the schedule based on highest value tasks first
+        """
+        self.global_schedule_dict = assigned_tasks
+        self.global_schedule_dict = {k: sorted(v, key=lambda x: -x[2]) for k, v in assigned_tasks.items()}
+        self.global_schedule_dict = {k: v for k, v in sorted(self.global_schedule_dict.items(), key=lambda item: item[0][-1])}
+
+        print(self.global_schedule_dict,'<---Global Schedule')
+
+
+
+
+
+
+
+
+
+
 
 
     def move(self,pos, direction):
@@ -529,6 +617,9 @@ class SmartPhones(Interface):
                 if new_pos not in visited:  # Check if the new position has not been visited
                     queue.append((new_pos, moves + [direction]))  # Add the new position and updated moves to the queue
         return "Error: Target unreachable"  # Return an error message if the target position is not reached
+
+
+
 
 
 
