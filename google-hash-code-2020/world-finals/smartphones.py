@@ -166,6 +166,8 @@ class SmartPhones(Interface):
         self.task_assembly_points = []
         self.global_schedule_dict = {}
 
+        self.track_current_loc = None
+
 
     def reads_text(self, file_name: str) -> str:
         """
@@ -278,9 +280,6 @@ class SmartPhones(Interface):
         for row in self.grid:
             print(row,'<--The original grid')
         print('\n')
-
-
-
 
 
 
@@ -563,12 +562,11 @@ class SmartPhones(Interface):
 
 
 
-
     def move(self,pos, direction):
         x, y = pos
-        if direction == "up":
+        if direction == "down":
             x -= 1
-        elif direction == "down":
+        elif direction == "up":
             x += 1
         elif direction == "left":
             y -= 1
@@ -615,14 +613,13 @@ class SmartPhones(Interface):
 
 
 
-
-
-
     def robot_worker(self):
         """
 
         :return:
         """
+        track_movement_list = []
+
         print(self.grid[2][3],'<---yes it is a robot')
 
         room = self.grid
@@ -632,38 +629,94 @@ class SmartPhones(Interface):
 
 
         for key, value in self.global_schedule_dict.items():
-            for inner_item in value:
-                print(inner_item,'<-----robot task')
-                print(key, '<-----robot location')
+
+            #for inner_item in value:
+            for index, inner_item in enumerate(value):
+
+
+                print(value[0][0],'<<<<<Working on this task')
+
+                assembly = inner_item
 
                 assembly = inner_item[1]
-                print(assembly,'<--- assembly')
 
-                for cell in assembly:
-                    print(cell,'<----celll')
-                    x,y = cell[0],cell[1]
+                print(assembly,'<<<<< assembly points in this task')
 
-                    start = key
-                    target = (x,y)
+                print(inner_item,'<Need to find solution')
+
+
+                #print(assembly,'****ASSEMBLY*****')
+
+                assembly_points = [item for sublist in assembly for item in sublist]
+
+                print(assembly_points,'Flat assembly')
+
+
+
+
+                """
+                
+                """
+                start = key
+
+                if index >0:
+                    start = self.track_current_loc
+
+
+                for i in range(0, len(assembly_points), 2):
+
+                    #print(assembly_points[i], assembly_points[i + 1])
+
+                    x, y = assembly_points[i], assembly_points[i + 1]
+                    target = (x, y)
+
+                    print(start, '<<<<<current location of ')
 
                     moves = self.automate_movement(start, target)
-                    print(moves)
 
-                    time.sleep(1000)
+                    track_movement_list.append(moves)
+
+                    self.track_current_loc = target
+
+                    print(key,'<Keyyyyy')
+
+
+                """
+                time.sleep(1000)
+
+                for index, coordinate in enumerate(assembly):
+
+                    start = key
+
+                    if index >0:
+                        start = self.track_current_loc
+
+                    print(start, '<<<<<current location of ')
+
+                    x, y = coordinate[0], coordinate[1]
+
+                    target = (x, y)
+
+                    moves = self.automate_movement(start, target)
+
+                    self.track_current_loc = target
+
+                    track_movement_list.append(moves)
+
+                    #print(track_movement_list,'********')
+            
+            """
 
 
 
+                
 
 
-        test_start = self.grid[3][1]
 
-        # Initialize starting and target positions
-        start = (3,2)
-        target = (3, 3)
+        print(track_movement_list,'<---List of movements per task')
 
-        # Calculate the shortest path from the start position to the target position
-        moves = self.automate_movement(start, target)
-        print(moves)
+
+
 
 
 
